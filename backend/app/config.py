@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # Cache / Queue broker
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     
+    # AI Provider Keys
+    OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
+    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+    COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY")
+    
     # CORS Origins (Comma-separated string parsed to list)
     ALLOWED_ORIGINS: list[str] = [
         origin.strip() for origin in os.getenv(

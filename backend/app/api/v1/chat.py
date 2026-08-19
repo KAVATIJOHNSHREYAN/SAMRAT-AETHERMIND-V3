@@ -29,6 +29,7 @@ class ChatResponse(BaseModel):
 class Attachment(BaseModel):
     type: str  # e.g. "image/png", "image/jpeg"
     data: str  # base64 string
+    name: Optional[str] = None
 
 class MessageCreate(BaseModel):
     content: str
@@ -111,11 +112,31 @@ def post_message(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
         
-    # Save User message
+    # Save User message (append image and document attachments as markdown/text)
+    content_to_save = payload.content
+    if payload.attachments:
+        for att in payload.attachments:
+            if att.type.startswith("image/"):
+                content_to_save += f"\n\n![Image](data:{att.type};base64,{att.data})"
+            else:
+                type_label = "File Attachment"
+                att_type = att.type.lower() if att.type else ""
+                if "pdf" in att_type:
+                    type_label = "PDF Document"
+                elif "word" in att_type or "docx" in att_type:
+                    type_label = "Word Document"
+                elif "presentation" in att_type or "powerpoint" in att_type or "pptx" in att_type:
+                    type_label = "PowerPoint Presentation"
+                elif "text" in att_type or "plain" in att_type:
+                    type_label = "Text File"
+                
+                filename = att.name or "Document"
+                content_to_save += f"\n\n---\n📎 **{filename}** ({type_label})"
+
     user_msg = Message(
         chat_id=chat_id,
         sender="user",
-        content=payload.content
+        content=content_to_save
     )
     db.add(user_msg)
     
@@ -131,13 +152,25 @@ def post_message(
     
     # 1. Parse Image and Video Generation Triggers
     content_lower = payload.content.lower().strip()
-    is_image_request = content_lower.startswith("/image") or any(phrase in content_lower for phrase in ["generate image", "generate a picture", "draw a", "make a picture"])
+    image_triggers = [
+        "create an image", "create image", "create pic", "create a picture", 
+        "generate image", "generate a picture", "generate pic", "generate a pic", 
+        "draw a", "make a picture", "make a photo", "create a photo", "/image"
+    ]
+    is_image_request = content_lower.startswith("/image") or any(phrase in content_lower for phrase in image_triggers)
     is_video_request = content_lower.startswith("/video") or any(phrase in content_lower for phrase in ["generate video", "make a video", "generate an animation", "animate "])
     
     has_image_attachment = payload.attachments and len(payload.attachments) > 0 and any(a.type.startswith("image/") for a in payload.attachments)
 
     if is_image_request:
-        prompt_text = payload.content.replace("/image", "").strip()
+        prompt_text = payload.content
+        for trigger in image_triggers:
+            if trigger in content_lower:
+                # Case-insensitive replacement
+                idx = prompt_text.lower().find(trigger)
+                if idx != -1:
+                    prompt_text = prompt_text[:idx] + prompt_text[idx+len(trigger):]
+        prompt_text = prompt_text.strip()
         
         async def media_image_generator():
             yield f"data: {json.dumps({'chunk': '🎨 Initalizing AetherMind Image Generation Engine...\n'})}\n\n"

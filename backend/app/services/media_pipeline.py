@@ -5,6 +5,7 @@ import urllib.parse
 import logging
 import asyncio
 from typing import Optional
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ def generate_image(prompt: str, openai_key: str = None) -> str:
     Generate image using OpenAI DALL-E 3 if key is present,
     otherwise fallback to Pollinations.ai (Free Keyless Tier).
     """
-    effective_openai_key = openai_key or os.getenv("OPENAI_API_KEY")
+    effective_openai_key = openai_key or settings.OPENAI_API_KEY or None
     if effective_openai_key:
         try:
             from openai import OpenAI
@@ -44,7 +45,7 @@ def generate_video(prompt: str, replicate_key: str = None) -> str:
     Generate video using Replicate (animatediff or similar models) if token is present,
     otherwise returns a beautifully styled fallback simulation warning video.
     """
-    effective_replicate_key = replicate_key or os.getenv("REPLICATE_API_KEY")
+    effective_replicate_key = replicate_key or settings.REPLICATE_API_KEY or None
     if not effective_replicate_key:
         logger.warning("No Replicate API key provided, using fallback video URL")
         return "https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-background-1611-large.mp4"
@@ -104,7 +105,7 @@ def swap_faces(source_image_base64: str, target_image_prompt: str, replicate_key
     # We use Pollinations to create the scene prompt
     scene_url = generate_image(target_image_prompt)
     
-    effective_replicate_key = replicate_key or os.getenv("REPLICATE_API_KEY")
+    effective_replicate_key = replicate_key or settings.REPLICATE_API_KEY or None
     if not effective_replicate_key:
         # If no key, we cannot run faceswap. Return the base scene image as a fallback
         logger.warning("No Replicate key for face swap, returning base scene image")

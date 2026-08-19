@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.db.postgres import Base, engine
-from app.api.v1 import auth, chat, upload, production, profile
+from app.api.v1 import auth, chat, upload, production, profile, doc_chat, image_edit
 from app.logging_config import logger
 
 # Initialize logging
@@ -105,6 +105,8 @@ app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(profile.router, prefix=settings.API_V1_STR)
 app.include_router(chat.router, prefix=settings.API_V1_STR)
 app.include_router(upload.router, prefix=settings.API_V1_STR)
+app.include_router(doc_chat.router, prefix=settings.API_V1_STR)
+app.include_router(image_edit.router, prefix=settings.API_V1_STR)
 
 # Production routes
 app.include_router(production.router)

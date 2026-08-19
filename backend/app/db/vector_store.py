@@ -3,7 +3,6 @@ import json
 import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +54,16 @@ def get_embedding(text: str, api_key: Optional[str] = None) -> Optional[List[flo
             logger.warning("No GOOGLE_GENAI_API_KEY provided for embeddings")
             return None
         
-        genai.configure(api_key=key)
-        result = genai.embed_content(
-            model="models/embedding-001",
-            content=text,
-            task_type="retrieval_document"
+        from google import genai
+        client = genai.Client(api_key=key)
+        result = client.models.embed_content(
+            model="text-embedding-004",
+            contents=text
         )
-        return result.get("embedding")
+        # Handle new SDK response format which wraps embeddings in a list
+        if result.embeddings:
+            return result.embeddings[0].values
+        return None
     
     except Exception as e:
         logger.error(f"Error generating embeddings: {e}")

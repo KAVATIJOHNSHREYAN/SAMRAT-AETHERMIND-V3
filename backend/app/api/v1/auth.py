@@ -138,6 +138,111 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         "user_id": user.id
     }
 
+class GoogleLoginRequest(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    profile_pic: Optional[str] = None
+
+@router.post("/google", response_model=TokenResponse)
+def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
+    # Check if user already exists
+    user = db.query(User).filter(User.email == payload.email).first()
+    
+    if not user:
+        # Create user profile implicitly
+        user_id = f"usr_{uuid_generator()}"
+        first_name = None
+        last_name = None
+        
+        if payload.name:
+            parts = payload.name.split(" ", 1)
+            first_name = parts[0]
+            if len(parts) > 1:
+                last_name = parts[1]
+                
+        user = User(
+            id=user_id,
+            email=payload.email,
+            first_name=first_name,
+            last_name=last_name,
+            profile_picture_url=payload.profile_pic,
+            subscription_status="free"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+    access_token = create_access_token(data={"sub": user.id})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id
+    }
+
+class BiometricLoginRequest(BaseModel):
+    mode: str # 'fingerprint' or 'face'
+
+@router.post("/biometric", response_model=TokenResponse)
+def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db)):
+    email = f"fingerprint_user@samrat.ai" if payload.mode == 'fingerprint' else f"faceid_user@samrat.ai"
+    
+    # Check if user already exists
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Create user profile implicitly
+        user_id = f"usr_{uuid_generator()}"
+        
+        user = User(
+            id=user_id,
+            email=email,
+            first_name="Fingerprint" if payload.mode == 'fingerprint' else "Face ID",
+            last_name="User",
+            subscription_status="premium"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+    access_token = create_access_token(data={"sub": user.id})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id
+    }
+
+class BiometricLoginRequest(BaseModel):
+    mode: str # 'fingerprint' or 'face'
+
+@router.post("/biometric", response_model=TokenResponse)
+def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db)):
+    email = f"fingerprint_user@samrat.ai" if payload.mode == 'fingerprint' else f"faceid_user@samrat.ai"
+    
+    # Check if user already exists
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Create user profile implicitly
+        user_id = f"usr_{uuid_generator()}"
+        
+        user = User(
+            id=user_id,
+            email=email,
+            first_name="Fingerprint" if payload.mode == 'fingerprint' else "Face ID",
+            last_name="User",
+            subscription_status="premium"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+    access_token = create_access_token(data={"sub": user.id})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id
+    }
+
 @router.get("/me", response_model=UserProfileResponse)
 def read_current_user(current_user: User = Depends(get_current_user)):
     return {

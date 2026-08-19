@@ -1,14 +1,51 @@
 import os
 import asyncio
 import time
+from app.config import settings
 from typing import AsyncGenerator, List, Dict, Optional
-import google.generativeai as genai
-import cohere
 
 from app.db.vector_store import similarity_search
 
 # Global dictionary to track last request execution times
 _user_last_request_time = {}
+
+def extract_text_from_file(file_bytes: bytes, mime_type: str) -> str:
+    import io
+    text = ""
+    mime_type_lower = mime_type.lower()
+    
+    if "pdf" in mime_type_lower:
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            for page in reader.pages:
+                text += (page.extract_text() or "") + "\n"
+        except Exception as e:
+            print("PDF text extraction error:", e)
+    elif "word" in mime_type_lower or "docx" in mime_type_lower or "doc" in mime_type_lower:
+        try:
+            import docx
+            doc = docx.Document(io.BytesIO(file_bytes))
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+        except Exception as e:
+            print("DOCX text extraction error:", e)
+    elif "presentation" in mime_type_lower or "powerpoint" in mime_type_lower or "pptx" in mime_type_lower or "ppt" in mime_type_lower:
+        try:
+            from pptx import Presentation
+            prs = Presentation(io.BytesIO(file_bytes))
+            for slide in prs.slides:
+                for shape in slide.shapes:
+                    if hasattr(shape, "text"):
+                        text += shape.text + "\n"
+        except Exception as e:
+            print("PPTX text extraction error:", e)
+    elif "text" in mime_type_lower or "plain" in mime_type_lower or "csv" in mime_type_lower or "json" in mime_type_lower:
+        try:
+            text = file_bytes.decode("utf-8", errors="ignore")
+        except Exception as e:
+            print("Text extraction error:", e)
+    return text.strip()
 
 
 async def generate_response_stream(
@@ -88,12 +125,22 @@ async def generate_response_stream(
 
     # Provider Detection
     is_openai_model = active_model.startswith("gpt-")
-    is_cohere_model = active_model.startswith("cohere-")
+    is_cohere_model = active_model.startswith("cohere-") or active_model.startswith("command-")
     is_gemini_model = active_model.startswith("gemini-")
 
-    effective_openai_key = openai_key or os.getenv("OPENAI_API_KEY")
-    effective_gemini_key = gemini_key or os.getenv("GEMINI_API_KEY")
-    effective_cohere_key = cohere_key or os.getenv("COHERE_API_KEY")
+    effective_openai_key = openai_key or settings.OPENAI_API_KEY or None
+    effective_gemini_key = gemini_key or settings.GEMINI_API_KEY or None
+    effective_cohere_key = cohere_key or settings.COHERE_API_KEY or None
+
+    # Fallback to Gemini if selected provider key is missing but Gemini key is present
+    if is_cohere_model and not effective_cohere_key and effective_gemini_key:
+        active_model = "gemini-2.5-flash"
+        is_cohere_model = False
+        is_gemini_model = True
+    elif is_openai_model and not effective_openai_key and effective_gemini_key:
+        active_model = "gemini-2.5-flash"
+        is_openai_model = False
+        is_gemini_model = True
 
     print("Gemini Loaded:", effective_gemini_key is not None)
     print("Cohere Loaded:", effective_cohere_key is not None)
@@ -150,6 +197,7 @@ async def generate_response_stream(
             return
 
         try:
+            import cohere
             print("Incoming active_model:", active_model)
             print("Is Cohere:", is_cohere_model)
 
@@ -219,48 +267,74 @@ async def generate_response_stream(
 
             return
 
-    # GEMINI
-    elif active_model.startswith("gemini-"):
+    # GEMINI — using new google.genai SDK
+    elif is_gemini_model:
         if not effective_gemini_key:
-            yield "AetherMind: Please enter your Gemini API key."
+            yield "AetherMind: Please enter your Gemini API key in Settings."
             return
 
         try:
-            genai.configure(api_key=effective_gemini_key)
+            from google import genai
+            from google.genai import types as genai_types
 
-            generation_config = genai.types.GenerationConfig(
-                temperature=temperature
-            )
+            client = genai.Client(api_key=effective_gemini_key)
 
-            model = genai.GenerativeModel(
-                model_name=active_model,
-                system_instruction=system_instructions
-            )
-
-            prompt_parts = []
+            # Build content parts
+            text_parts = []
 
             if context_str:
-                prompt_parts.append(
-                    f"Background Context:\n{context_str}"
-                )
+                text_parts.append(f"Background Context:\n{context_str}")
 
             for msg in chat_history[-5:]:
                 sender = "User" if msg["sender"] == "user" else "Assistant"
-                prompt_parts.append(
-                    f"{sender}: {msg['content']}"
-                )
+                text_parts.append(f"{sender}: {msg['content']}")
 
-            prompt_parts.append(
-                f"User Query: {query}"
+            text_parts.append(f"User Query: {query}")
+
+            # Process attachments
+            multimodal_parts = []
+            if attachments:
+                import base64
+                for att in attachments:
+                    att_type = att.get("type", "").lower()
+                    if att.get("data") and att_type:
+                        try:
+                            b64_data = att["data"]
+                            if "," in b64_data:
+                                b64_data = b64_data.split(",")[1]
+                            raw_data = base64.b64decode(b64_data)
+
+                            # Native Gemini multimodal mime types: images, video, audio, pdf
+                            if att_type.startswith("image/") or att_type.startswith("audio/") or att_type.startswith("video/") or "pdf" in att_type:
+                                multimodal_parts.append(
+                                    genai_types.Part.from_bytes(
+                                        data=raw_data,
+                                        mime_type=att["type"]
+                                    )
+                                )
+                            else:
+                                # Fallback text extraction for office documents & plaintext
+                                ext_text = extract_text_from_file(raw_data, att_type)
+                                if ext_text:
+                                    text_parts.append(
+                                        f"\n--- Attached Document ({att.get('name', 'file')}) ---\n{ext_text}\n-------------------------------\n"
+                                    )
+                        except Exception as e:
+                            print("Error processing attachment:", e)
+
+            # Combine text + multimodal parts
+            content_parts = ["\n".join(text_parts)] + multimodal_parts
+
+            config = genai_types.GenerateContentConfig(
+                system_instruction=system_instructions,
+                temperature=temperature,
             )
 
-            prompt = "\n".join(prompt_parts)
-
             response = await asyncio.to_thread(
-                model.generate_content,
-                prompt,
-                generation_config=generation_config,
-                stream=True
+                client.models.generate_content_stream,
+                model=active_model,
+                contents=content_parts,
+                config=config,
             )
 
             for chunk in response:
@@ -274,7 +348,8 @@ async def generate_response_stream(
 
             if "429" in error_str or "quota" in error_str.lower():
                 yield "AetherMind: Gemini quota exceeded. Please wait 30 seconds."
-
+            elif "API_KEY_INVALID" in error_str or "invalid" in error_str.lower():
+                yield "AetherMind: Invalid Gemini API key. Please check your key in Settings."
             else:
                 yield f"AI Error: {error_str}"
 

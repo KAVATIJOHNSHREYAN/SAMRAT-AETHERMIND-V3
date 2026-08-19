@@ -63,6 +63,32 @@ export const apiService = {
     return res.json();
   },
 
+  async googleLogin(email: string, name: string, profilePic: string) {
+    const res = await fetch(`${BASE_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, profile_pic: profilePic }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Google sign-in failed' }));
+      throw new Error(err.detail || 'Google sign-in failed');
+    }
+    return res.json();
+  },
+
+  async biometricLogin(mode: 'fingerprint' | 'face') {
+    const res = await fetch(`${BASE_URL}/auth/biometric`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Biometric sign-in failed' }));
+      throw new Error(err.detail || 'Biometric sign-in failed');
+    }
+    return res.json();
+  },
+
   async getProfile(token: string) {
     const res = await fetch(`${BASE_URL}/auth/me`, {
       headers: getHeaders(token),
@@ -222,11 +248,14 @@ export const apiService = {
           const cleanLine = line.trim();
           if (cleanLine.startsWith('data: ')) {
             try {
+              console.log('RAW SSE DATA:', cleanLine.substring(6));
               const dataObj = JSON.parse(cleanLine.substring(6));
               if (dataObj && dataObj.chunk) {
+                console.log('EXTRACTED CHUNK:', dataObj.chunk);
                 onChunk(dataObj.chunk);
               }
             } catch (err) {
+              console.error('SSE PARSE ERROR:', err);
               // Ignore partial parsing errors
             }
           }
@@ -507,5 +536,75 @@ export const apiService = {
     } else {
       return `${url}/api/v1`;
     }
+  },
+
+  // --- NEW DOC-CHAT SERVICES ---
+  async getDocPdfs(token: string) {
+    const res = await fetch(`${BASE_URL}/doc-chat/pdfs`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to load PDFs');
+    return res.json();
+  },
+
+  async deleteDocPdf(token: string, pdfId: number) {
+    const res = await fetch(`${BASE_URL}/doc-chat/delete/${pdfId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete PDF');
+    return res.json();
+  },
+
+  async getDocChatHistory(token: string, pdfId: number) {
+    const res = await fetch(`${BASE_URL}/doc-chat/chat/${pdfId}`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to load document chat history');
+    return res.json();
+  },
+
+  async sendDocChatMessage(token: string, pdfId: number, question: string, settings: ModelSettings) {
+    const headers = getHeaders(token);
+    if (settings.geminiApiKey) {
+      headers['X-Gemini-API-Key'] = settings.geminiApiKey;
+    }
+    if (settings.openaiApiKey) {
+      headers['X-OpenAI-API-Key'] = settings.openaiApiKey;
+    }
+    const res = await fetch(`${BASE_URL}/doc-chat/chat`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ pdf_id: pdfId, question })
+    });
+    if (!res.ok) throw new Error('Document chat failed');
+    return res.json();
+  },
+
+  async uploadDocPdf(token: string, file: File, settings: ModelSettings) {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (settings.geminiApiKey) {
+      headers['X-Gemini-API-Key'] = settings.geminiApiKey;
+    }
+    if (settings.openaiApiKey) {
+      headers['X-OpenAI-API-Key'] = settings.openaiApiKey;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${BASE_URL}/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(err.detail || 'Upload failed');
+    }
+    return res.json();
   }
 };

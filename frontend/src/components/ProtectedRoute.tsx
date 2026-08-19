@@ -19,7 +19,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    router.push('/auth/login');
+    router.push('/');
     return null;
   }
 

@@ -24,3 +24,15 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Local database
+*.db
+aetherchat.db
+app/db/documents_store.json
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/

@@ -18,12 +18,12 @@ export default function ProfilePage() {
     try {
       await apiService.logout();
       logout();
-      router.push('/auth/login');
+      router.push('/');
     } catch (err) {
       console.error('Logout error:', err);
       // Force logout even if API call fails
       logout();
-      router.push('/auth/login');
+      router.push('/');
     }
   };
 
