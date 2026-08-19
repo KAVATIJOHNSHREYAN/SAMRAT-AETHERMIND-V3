@@ -106,7 +106,9 @@ def post_message(
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key"),
     x_openai_api_key: Optional[str] = Header(None, alias="X-OpenAI-API-Key"),
     x_replicate_api_key: Optional[str] = Header(None, alias="X-Replicate-API-Key"),
-    x_cohere_api_key: Optional[str] = Header(None, alias="X-Cohere-API-Key")
+    x_cohere_api_key: Optional[str] = Header(None, alias="X-Cohere-API-Key"),
+    x_anthropic_api_key: Optional[str] = Header(None, alias="X-Anthropic-API-Key"),
+    x_deepseek_api_key: Optional[str] = Header(None, alias="X-DeepSeek-API-Key")
 ):
     chat = db.query(Chat).filter(Chat.id == chat_id, Chat.user_id == current_user.id).first()
     if not chat:
@@ -262,6 +264,8 @@ def post_message(
             openai_key=x_openai_api_key,
             gemini_key=x_gemini_api_key,
             cohere_key=x_cohere_api_key,
+            anthropic_key=x_anthropic_api_key,
+            deepseek_key=x_deepseek_api_key,
             attachments=attachments_list,
             user_id=current_user.id
         ):

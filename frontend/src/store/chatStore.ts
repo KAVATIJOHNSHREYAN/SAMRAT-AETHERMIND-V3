@@ -32,6 +32,8 @@ export interface ModelSettings {
   openaiApiKey: string;
   cohereApiKey: string;
   replicateApiKey: string;
+  anthropicApiKey: string;
+  deepseekApiKey: string;
 }
 
 export interface ProfileSettings {
@@ -164,6 +166,14 @@ export const useChatStore = create<ChatStoreState>((set) => ({
       typeof window !== 'undefined'
         ? localStorage.getItem('aether_replicate_api_key') || ''
         : '',
+    anthropicApiKey:
+      typeof window !== 'undefined'
+        ? localStorage.getItem('aether_anthropic_api_key') || ''
+        : '',
+    deepseekApiKey:
+      typeof window !== 'undefined'
+        ? localStorage.getItem('aether_deepseek_api_key') || ''
+        : '',
   },
   profileSettings: {
     username: typeof window !== 'undefined' ? localStorage.getItem('aether_username') || '' : '',
@@ -249,6 +259,8 @@ export const useChatStore = create<ChatStoreState>((set) => ({
       localStorage.setItem('aether_openai_api_key', nextSettings.openaiApiKey);
       localStorage.setItem('aether_cohere_api_key', nextSettings.cohereApiKey);
       localStorage.setItem('aether_replicate_api_key', nextSettings.replicateApiKey);
+      localStorage.setItem('aether_anthropic_api_key', nextSettings.anthropicApiKey);
+      localStorage.setItem('aether_deepseek_api_key', nextSettings.deepseekApiKey);
     }
     return { modelSettings: nextSettings };
   }),

@@ -206,6 +206,12 @@ export const apiService = {
     if (settings.cohereApiKey) {
       headers['X-Cohere-API-Key'] = settings.cohereApiKey;
     }
+    if (settings.anthropicApiKey) {
+      headers['X-Anthropic-API-Key'] = settings.anthropicApiKey;
+    }
+    if (settings.deepseekApiKey) {
+      headers['X-DeepSeek-API-Key'] = settings.deepseekApiKey;
+    }
 
     const res = await fetch(`${BASE_URL}/chat/${chatId}/message`, {
       method: 'POST',

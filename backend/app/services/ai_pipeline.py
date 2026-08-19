@@ -60,6 +60,8 @@ async def generate_response_stream(
     openai_key: str = None,
     gemini_key: str = None,
     cohere_key: str = None,
+    anthropic_key: str = None,
+    deepseek_key: str = None,
     attachments: Optional[List[dict]] = None,
     user_id: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
@@ -129,7 +131,9 @@ async def generate_response_stream(
     keys = {
         "gemini_key": gemini_key,
         "openai_key": openai_key,
-        "cohere_key": cohere_key
+        "cohere_key": cohere_key,
+        "anthropic_key": anthropic_key,
+        "deepseek_key": deepseek_key
     }
     
     async for chunk in ai_router.stream_orchestrated_response(
