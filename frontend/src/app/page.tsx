@@ -1982,6 +1982,21 @@ export default function Home() {
                         </button>
                       </div>
 
+                      {/* Debug Mode Toggle */}
+                      <div className={`flex items-center justify-between p-3.5 border rounded-2xl ${isDark ? 'bg-slate-950 border-slate-900' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                        <div>
+                          <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Provider Debug Mode</label>
+                          <span className="text-[10px] text-slate-500 block mt-0.5">Expose underlying AI model and provider options.</span>
+                        </div>
+                        <button
+                          onClick={() => setAppearanceSettings({ debugMode: !appearanceSettings.debugMode })}
+                          className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors flex-shrink-0 ${appearanceSettings.debugMode ? 'bg-violet-600' : 'bg-slate-800'}`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${appearanceSettings.debugMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
                       <div>
                         <label className={`block text-xs font-bold mb-1.5 flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                           <EyeOff className="w-3.5 h-3.5 text-slate-400" /> Hidden Chats List
@@ -2155,21 +2170,32 @@ export default function Home() {
                 {activeSettingsTab === 'model' && (
                   <div className="space-y-4">
                     <div>
-                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model</label>
-                      <select
-                        value={modelSettings.modelName}
-                        onChange={(e) => setModelSettings({ modelName: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                      >
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                        <option value="cohere-command-r">Cohere Command-R</option>
-                        <option value="cohere-command-r-plus">Cohere Command-R+</option>
-                        <option value="cohere-command-light">Cohere Command-Light</option>
-                        <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Efficient)</option>
-                        <option value="gpt-4o">OpenAI GPT-4o (Premium)</option>
-                      </select>
+                      {!appearanceSettings.debugMode ? (
+                        <div>
+                          <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model</label>
+                          <div className={`w-full px-3 py-2.5 border rounded-xl text-xs font-bold ${isDark ? 'bg-slate-900/40 border-slate-850 text-violet-400' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                            SAMRAT AI (Auto Orchestrated)
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model (Debug Mode)</label>
+                          <select
+                            value={modelSettings.modelName}
+                            onChange={(e) => setModelSettings({ modelName: e.target.value })}
+                            className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                          >
+                            <option value="auto">SAMRAT AI (Auto)</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                            <option value="cohere-command-r">Cohere Command-R</option>
+                            <option value="cohere-command-r-plus">Cohere Command-R+</option>
+                            <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                            <option value="gpt-4o">OpenAI GPT-4o</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     <div>

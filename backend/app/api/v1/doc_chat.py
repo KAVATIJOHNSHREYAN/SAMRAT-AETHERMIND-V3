@@ -134,24 +134,37 @@ async def chat(
     else:
         context = "\n\n".join([chunk.chunk_text for chunk in chunks[:3]])
 
-    # Generate answer using standard project prompt/Gemini model
-    effective_api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_API_KEY")
-    if not effective_api_key:
-        answer = "Error: Gemini API Key not configured. Please add it to system settings."
-    else:
-        # Load local gemini model config
-        try:
-            from google import genai
-            from google.genai import types as genai_types
-            client = genai.Client(api_key=effective_api_key)
-            prompt = f"Answer the user's question using only the information from this document.\n\nDocument:\n{context}\n\nQuestion: {request.question}"
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt
-            )
-            answer = response.text
-        except Exception as e:
-            answer = f"Error generating answer: {str(e)}"
+    # Generate answer using Multi-Provider Orchestration System (AI Router)
+    from app.services.ai_router import ai_router
+    
+    # Retrieve recent chat history for this document
+    history_msgs = db.query(ChatMessage).filter(ChatMessage.pdf_id == pdf.id).order_by(ChatMessage.created_at.desc()).limit(5).all()
+    history_msgs.reverse()
+    history = [{"sender": "user" if m.role == "user" else "assistant", "content": m.message} for m in history_msgs]
+    
+    keys = {
+        "gemini_key": x_gemini_api_key,
+        "openai_key": x_openai_api_key
+    }
+    
+    async def get_router_answer():
+        answer_chunks = []
+        async for chunk in ai_router.stream_orchestrated_response(
+            query=f"Answer the user's question using only the information from this document.\n\nDocument:\n{context}\n\nQuestion: {request.question}",
+            chat_history=history,
+            chat_mode="docChat",
+            system_instructions="You are AetherMind. Answer user questions relying on the provided context.",
+            temperature=0.3,
+            keys=keys,
+            attachments=None
+        ):
+            # Strip system failover indicators in final document QA reply if desired
+            if not chunk.startswith("*(System failover"):
+                answer_chunks.append(chunk)
+        return "".join(answer_chunks)
+        
+    import asyncio
+    answer = asyncio.run(get_router_answer()) if not asyncio.get_event_loop().is_running() else asyncio.get_event_loop().run_until_complete(get_router_answer())
 
     # Save assistant's reply
     assistant_message = ChatMessage(

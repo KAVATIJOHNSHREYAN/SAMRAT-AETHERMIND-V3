@@ -42,6 +42,7 @@ export interface ProfileSettings {
 export interface AppearanceSettings {
   theme: 'light' | 'dark';
   interfaceStyle: 'Cyberpunk' | 'Minimal' | 'Glassmorphism' | 'Classic' | 'Hacker';
+  debugMode: boolean;
 }
 
 export interface LanguageSettings {
@@ -121,8 +122,8 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   modelSettings: {
     modelName:
       typeof window !== 'undefined'
-        ? localStorage.getItem('aether_model_name') || 'gemini-2.5-flash'
-        : 'gemini-2.5-flash',
+        ? localStorage.getItem('aether_model_name') || 'auto'
+        : 'auto',
 
     temperature:
       typeof window !== 'undefined'
@@ -171,6 +172,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   appearanceSettings: {
     theme: typeof window !== 'undefined' ? (localStorage.getItem('theme') as 'light' | 'dark') || 'dark' : 'dark',
     interfaceStyle: typeof window !== 'undefined' ? (localStorage.getItem('aether_interface_style') as 'Cyberpunk' | 'Minimal' | 'Glassmorphism' | 'Classic' | 'Hacker') || 'Classic' : 'Classic',
+    debugMode: typeof window !== 'undefined' ? localStorage.getItem('aether_debug_mode') === 'true' : false,
   },
   languageSettings: {
     textLanguage: typeof window !== 'undefined' ? localStorage.getItem('aether_text_language') || 'English' : 'English',
@@ -263,6 +265,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('theme', nextSettings.theme);
       localStorage.setItem('aether_interface_style', nextSettings.interfaceStyle);
+      localStorage.setItem('aether_debug_mode', nextSettings.debugMode.toString());
       document.documentElement.classList.toggle('dark', nextSettings.theme === 'dark');
       document.documentElement.setAttribute('data-theme', nextSettings.interfaceStyle.toLowerCase());
     }
