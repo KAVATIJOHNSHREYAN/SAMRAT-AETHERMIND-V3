@@ -6,6 +6,8 @@ import { apiService } from '@/services/api';
 import { useVoice } from '@/hooks/useVoice';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
+import { DocumentChat } from '@/components/chat/DocumentChat';
+import ImageEditStudio from '@/components/ImageEditStudio';
 import { useAuth } from '@/context/AuthContext';
 import {
   MessageSquare,
@@ -16,6 +18,7 @@ import {
   Sparkles,
   ArrowLeft,
   Keyboard,
+
   Bookmark,
   Send,
   Loader2,
@@ -185,6 +188,7 @@ export default function Home() {
 
   // Screen routing state
   const [activeScreen, setActiveScreen] = useState<'splash' | 'dashboard' | 'chat' | 'voice'>('splash');
+  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>('chat');
 
   // Auth state
   const [isLoginView, setIsLoginView] = useState(true);
@@ -250,7 +254,7 @@ export default function Home() {
         // Biometric verification succeeded — fetch real token from backend
         const data = await apiService.biometricLogin(mode);
         const biometricEmail = mode === 'fingerprint' ? 'fingerprint_user@samrat.ai' : 'faceid_user@samrat.ai';
-        
+
         // Sync AuthContext (used by ProtectedRoute)
         authLogin(data.access_token, data.user_id, biometricEmail);
         // Sync chatStore
@@ -266,8 +270,8 @@ export default function Home() {
       const message = err?.name === 'NotAllowedError'
         ? 'Biometric verification was cancelled or timed out.'
         : err?.name === 'InvalidStateError'
-        ? 'A credential already exists. Verifying identity...'
-        : err?.message || 'Biometric authentication failed.';
+          ? 'A credential already exists. Verifying identity...'
+          : err?.message || 'Biometric authentication failed.';
 
       // If InvalidStateError, the user already registered — try to authenticate instead
       if (err?.name === 'InvalidStateError') {
@@ -864,7 +868,7 @@ export default function Home() {
             {/* Soft planetary arc backdrop */}
             <div className="absolute top-[10%] right-[-30%] w-[650px] h-[650px] rounded-full border border-violet-500/20 bg-gradient-to-br from-violet-955/20 via-transparent to-transparent opacity-80 pointer-events-none" />
             <div className="absolute top-[15%] right-[-25%] w-[550px] h-[550px] rounded-full border border-indigo-500/10 pointer-events-none" />
-            
+
             {/* Top network badge */}
             <div className="z-10 self-start">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.04] bg-white/[0.02] backdrop-blur-md text-[9px] font-bold tracking-widest text-slate-400 uppercase">
@@ -877,7 +881,7 @@ export default function Home() {
             <div className="my-auto z-10 space-y-8 max-w-lg">
               {/* Spherical Logo + Speak Greeting popover */}
               <div className="flex items-center gap-4 relative">
-                <div 
+                <div
                   onClick={() => speakGreeting(true)}
                   className="w-24 h-24 rounded-full bg-[#04040a] border border-violet-500/30 flex items-center justify-center p-3 relative shadow-[0_0_30px_rgba(124,58,237,0.3)] hover:scale-[1.03] transition-all cursor-pointer group"
                 >
@@ -936,7 +940,7 @@ export default function Home() {
           {/* Right panel: Modern glassmorphism System Authentication Card */}
           <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-[#030307]/90 relative">
             <div className="w-full max-w-md border border-white/[0.05] bg-[#07070f]/90 p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-6 relative z-10">
-              
+
               {/* Header Title with security icon badge */}
               <div className="flex items-center justify-between">
                 <div>
@@ -986,7 +990,7 @@ export default function Home() {
                     {authError}
                   </div>
                 )}
-                
+
                 <div className="space-y-1.5">
                   <label htmlFor="email" className="block text-[9px] uppercase font-bold tracking-wider text-slate-500">
                     EMAIL ADDRESS
@@ -1112,18 +1116,16 @@ export default function Home() {
                 stopListening();
                 setActiveScreen('chat');
               }}
-              className={`p-3 border rounded-2xl transition-colors ${
-                isDark ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`p-3 border rounded-2xl transition-colors ${isDark ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Voice Assistant</span>
             <button
               onClick={() => setActiveScreen('chat')}
-              className={`p-3 border rounded-2xl transition-colors ${
-                isDark ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`p-3 border rounded-2xl transition-colors ${isDark ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
             >
               <Keyboard className="w-4 h-4" />
             </button>
@@ -1142,9 +1144,8 @@ export default function Home() {
           </div>
 
           {/* Dialogue display */}
-          <div className={`border rounded-3xl p-5 min-h-[110px] flex flex-col justify-center text-center shadow-lg backdrop-blur-md ${
-            isDark ? 'bg-slate-900/40 border-slate-850' : 'bg-white/80 border-slate-150'
-          }`}>
+          <div className={`border rounded-3xl p-5 min-h-[110px] flex flex-col justify-center text-center shadow-lg backdrop-blur-md ${isDark ? 'bg-slate-900/40 border-slate-850' : 'bg-white/80 border-slate-150'
+            }`}>
             <p className={`text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Dialogue Stream</p>
             {voiceTranscript && (
               <p className={`text-xs italic mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -1160,29 +1161,26 @@ export default function Home() {
           <div className="flex items-center justify-between px-6 mt-8">
             <button
               onClick={() => setActiveScreen('chat')}
-              className={`p-4 border rounded-full transition-colors ${
-                isDark ? 'bg-slate-900/60 border-slate-850 text-slate-400 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`p-4 border rounded-full transition-colors ${isDark ? 'bg-slate-900/60 border-slate-850 text-slate-400 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <Keyboard className="w-4 h-4" />
             </button>
 
             <button
               onClick={isListening ? stopListening : startListening}
-              className={`w-18 h-18 rounded-full flex items-center justify-center transition-all shadow-xl ${
-                isListening
-                  ? 'bg-red-500 hover:bg-red-400 shadow-red-950/50 animate-pulse'
-                  : 'bg-gradient-to-tr from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 shadow-violet-950/50'
-              }`}
+              className={`w-18 h-18 rounded-full flex items-center justify-center transition-all shadow-xl ${isListening
+                ? 'bg-red-500 hover:bg-red-400 shadow-red-950/50 animate-pulse'
+                : 'bg-gradient-to-tr from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 shadow-violet-950/50'
+                }`}
             >
               <Mic className="w-7 h-7 text-white" />
             </button>
 
             <button
               onClick={() => speak(voiceReplyText)}
-              className={`p-4 border rounded-full transition-colors ${
-                isDark ? 'bg-slate-900/60 border-slate-850 text-slate-400 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`p-4 border rounded-full transition-colors ${isDark ? 'bg-slate-900/60 border-slate-850 text-slate-400 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <Sparkles className="w-4 h-4" />
             </button>
@@ -1194,15 +1192,13 @@ export default function Home() {
       {activeScreen === 'chat' && (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
           {/* Top Navbar */}
-          <nav className={`py-4 px-6 border-b backdrop-blur-xl flex items-center justify-between transition-colors z-20 ${
-            isDark ? "bg-[#030303] border-white/[0.04] text-white" : "bg-white/80 border-slate-200 text-slate-800"
-          }`}>
+          <nav className={`py-4 px-6 border-b backdrop-blur-xl flex items-center justify-between transition-colors z-20 ${isDark ? "bg-[#030303] border-white/[0.04] text-white" : "bg-white/80 border-slate-200 text-slate-800"
+            }`}>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSidebarOpen(!isSidebarOpen)}
-                className={`p-2 rounded-xl border transition-all ${
-                  isDark ? 'border-white/10 bg-white/[0.02] text-slate-300 hover:text-white hover:bg-white/[0.06]' : 'bg-slate-150 border-slate-200 text-slate-650 hover:bg-slate-200'
-                }`}
+                className={`p-2 rounded-xl border transition-all ${isDark ? 'border-white/10 bg-white/[0.02] text-slate-300 hover:text-white hover:bg-white/[0.06]' : 'bg-slate-150 border-slate-200 text-slate-650 hover:bg-slate-200'
+                  }`}
                 title="Toggle Sidebar"
               >
                 <Menu className="w-4 h-4" />
@@ -1225,21 +1221,15 @@ export default function Home() {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    if (tab.id === 'docChat') {
-                      setIsSettingsOpen(true);
-                      setActiveSettingsTab('rag');
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-4.5 py-2 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                    tab.id === 'chat'
-                      ? isDark
-                        ? 'bg-violet-600/20 text-violet-400 border border-violet-500/40 shadow-[0_0_15px_rgba(124,58,237,0.25)]'
-                        : 'bg-white text-[#0EA5E9] shadow-sm border border-slate-200/50'
-                      : isDark
-                        ? 'text-slate-400 hover:text-white'
-                        : 'text-slate-505 hover:text-[#0EA5E9]'
-                  }`}
+                  onClick={() => setWorkspaceTab(tab.id as 'chat' | 'docChat' | 'imageEdit')}
+                  className={`flex items-center gap-1.5 px-4.5 py-2 rounded-full text-[11px] font-bold transition-all cursor-pointer ${workspaceTab === tab.id
+                    ? isDark
+                      ? 'bg-violet-600/20 text-violet-400 border border-violet-500/40 shadow-[0_0_15px_rgba(124,58,237,0.25)]'
+                      : 'bg-white text-[#0EA5E9] shadow-sm border border-slate-200/50'
+                    : isDark
+                      ? 'text-slate-400 hover:text-white'
+                      : 'text-slate-505 hover:text-[#0EA5E9]'
+                    }`}
                 >
                   <span>{tab.label}</span>
                 </button>
@@ -1259,11 +1249,10 @@ export default function Home() {
                   setIsSettingsOpen(true);
                   setActiveSettingsTab('profile');
                 }}
-                className={`p-2 rounded-xl border transition-all ${
-                  isDark
-                    ? 'border-white/10 bg-white/[0.02] text-slate-355 hover:text-white'
-                    : 'border-slate-200 bg-white text-slate-505 hover:text-[#0EA5E9]'
-                }`}
+                className={`p-2 rounded-xl border transition-all ${isDark
+                  ? 'border-white/10 bg-white/[0.02] text-slate-355 hover:text-white'
+                  : 'border-slate-200 bg-white text-slate-505 hover:text-[#0EA5E9]'
+                  }`}
                 title="Settings"
               >
                 <Settings className="w-4 h-4" />
@@ -1278,106 +1267,122 @@ export default function Home() {
             </div>
           </nav>
 
-    <div className="flex flex-1 min-h-0 overflow-hidden relative">
+          <div className="flex flex-1 min-h-0 overflow-hidden relative">
 
-      {/* Left Slide-out Sidebar */}
-      {isSidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden"
-        />
-      )}
+            {/* Left Slide-out Sidebar */}
+            {isSidebarOpen && (
+              <div
+                onClick={() => setSidebarOpen(false)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden"
+              />
+            )}
 
-      <aside className={`fixed inset-y-0 left-0 md:static z-30 w-64 h-full flex flex-col border-r ${
-        isDark ? 'border-white/[0.04] bg-[#07070d] text-white' : 'border-slate-200 bg-white/95 text-slate-800'
-      } transition-all duration-300 ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full md:-ml-64 opacity-0'}`}>
-        {/* Sidebar Logo */}
-        <div className="p-6 flex items-center gap-3 border-b border-white/[0.04]">
-          <div className="w-8 h-8 rounded-xl bg-violet-650/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-[0_0_12px_rgba(124,58,237,0.3)]">
-            <Bot className="w-4 h-4" />
-          </div>
-          <span className="font-extrabold text-sm tracking-widest bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            SAMRAT <span className="text-violet-400">AI</span>
-          </span>
-        </div>
-
-        {/* Sidebar Items */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 scrollbar-none">
-          <button
-            className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer bg-violet-955/40 text-violet-400 border border-violet-500/20"
-          >
-            <Bot className="w-4 h-4" />
-            <span>Home</span>
-          </button>
-          <button
-            onClick={() => {
-              setIsSettingsOpen(true);
-              setActiveSettingsTab('rag');
-            }}
-            className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
-          >
-            <FileText className="w-4 h-4 text-slate-505" />
-            <span>DocMind AI</span>
-          </button>
-          <button
-            className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
-          >
-            <Image className="w-4 h-4 text-slate-505" />
-            <span>Image Studio</span>
-          </button>
-
-          <div className="h-px bg-white/[0.04] my-4" />
-
-          <div className="space-y-1">
-            <span className="px-4 text-[9px] uppercase tracking-widest font-extrabold text-slate-650 block mb-2">
-              WORKSPACE
-            </span>
-            {[
-              { id: 'templates', label: 'Templates', icon: LayoutTemplate },
-              { id: 'integrations', label: 'Integrations', icon: Zap },
-              { id: 'analytics', label: 'Analytics', icon: Activity }
-            ].map(item => (
-              <button
-                key={item.id}
-                className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
-              >
-                <item.icon className="w-4 h-4 text-slate-505" />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* User profile & upgrades in sidebar footer */}
-        <div className="p-4 border-t border-white/[0.04] space-y-3">
-          <div className="flex items-center justify-between bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-[10px]">
-                N
+            <aside className={`fixed inset-y-0 left-0 md:static z-30 w-64 h-full flex flex-col border-r ${isDark ? 'border-white/[0.04] bg-[#07070d] text-white' : 'border-slate-200 bg-white/95 text-slate-800'
+              } transition-all duration-300 ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full md:-ml-64 opacity-0'}`}>
+              {/* Sidebar Logo */}
+              <div className="p-6 flex items-center gap-3 border-b border-white/[0.04]">
+                <div className="w-8 h-8 rounded-xl bg-violet-650/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-[0_0_12px_rgba(124,58,237,0.3)]">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <span className="font-extrabold text-sm tracking-widest bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                  SAMRAT <span className="text-violet-400">AI</span>
+                </span>
               </div>
-              <div className="min-w-0">
-                <span className="block text-[11px] font-bold text-white truncate">SAMRAT AI</span>
-                <span className="block text-[9px] font-extrabold text-amber-400">★ Premium Plan</span>
+
+              {/* Sidebar Items */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 scrollbar-none">
+                <button
+                  className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer bg-violet-955/40 text-violet-400 border border-violet-500/20"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>Home</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setActiveSettingsTab('rag');
+                  }}
+                  className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-slate-505" />
+                  <span>DocMind AI</span>
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
+                >
+                  <Image className="w-4 h-4 text-slate-505" />
+                  <span>Image Studio</span>
+                </button>
+
+                <div className="h-px bg-white/[0.04] my-4" />
+
+                <div className="space-y-1">
+                  <span className="px-4 text-[9px] uppercase tracking-widest font-extrabold text-slate-650 block mb-2">
+                    WORKSPACE
+                  </span>
+                  {[
+                    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
+                    { id: 'integrations', label: 'Integrations', icon: Zap },
+                    { id: 'analytics', label: 'Analytics', icon: Activity }
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      className="w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-455 hover:bg-white/[0.02] hover:text-white transition-all cursor-pointer"
+                    >
+                      <item.icon className="w-4 h-4 text-slate-505" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-550 shrink-0" />
-          </div>
-          <button
-            onClick={() => {
-              setIsSettingsOpen(true);
-              setActiveSettingsTab('profile');
-            }}
-            className="w-full py-2.5 border border-violet-500/30 bg-violet-650/10 hover:bg-violet-650/20 text-violet-400 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Upgrade Plan</span>
-          </button>
-        </div>
-      </aside>
 
-    <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+              {/* User profile & upgrades in sidebar footer */}
+              <div className="p-4 border-t border-white/[0.04] space-y-3">
+                <div className="flex items-center justify-between bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-[10px]">
+                      N
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-bold text-white truncate">SAMRAT AI</span>
+                      <span className="block text-[9px] font-extrabold text-amber-400">★ Premium Plan</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-550 shrink-0" />
+                </div>
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setActiveSettingsTab('profile');
+                  }}
+                  className="w-full py-2.5 border border-violet-500/30 bg-violet-650/10 hover:bg-violet-650/20 text-violet-400 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Upgrade Plan</span>
+                </button>
+              </div>
+            </aside>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 pb-44">
+            <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+
+              {/* DocMind AI Panel */}
+              {workspaceTab === 'docChat' && (
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
+                  <DocumentChat />
+                </div>
+              )}
+
+              {/* Image Studio Panel */}
+              {workspaceTab === 'imageEdit' && (
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
+                  <ImageEditStudio token={token || ''} />
+                </div>
+              )}
+
+              {/* Standard Chat Panel */}
+              {workspaceTab === 'chat' && (
+                <>
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 pb-44">
         {!activeChatId ? (
           <div className="min-h-full flex flex-col items-center justify-center relative overflow-hidden px-6 py-12">
             {/* Soft Space planetary background arcs and star dust field */}
@@ -1617,309 +1622,311 @@ export default function Home() {
     </div>
   </div>
 </div>
-</main>
-</div>
-</div>
-)}
+        </>
+      )} {/* end workspaceTab === 'chat' */}
+            </main>
+          </div>
+        </div>
+      )}
 
-{contextMenuPos && contextMenuChat && (
-    <div
-      className={`fixed z-50 w-52 rounded-2xl border p-1 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${isDark ? 'bg-slate-950/90 border-slate-800 text-slate-200 shadow-violet-950/15' : 'bg-white/95 border-slate-200 text-slate-850 shadow-slate-200/50'
-        }`}
-      style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
-    >
-      <button
-        onClick={async () => {
-          try {
-            await apiService.updateChat(token!, contextMenuChat.id, { is_pinned: !contextMenuChat.is_pinned });
-            loadChats();
-          } catch (e) { console.error(e); }
-        }}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
-          }`}
-      >
-        <Pin className={`w-3.5 h-3.5 ${contextMenuChat.is_pinned ? 'text-cyan-400' : 'text-slate-500'}`} />
-        {contextMenuChat.is_pinned ? 'Unpin Conversation' : 'Pin Conversation'}
-      </button>
-      <button
-        onClick={() => {
-          setChatEditTitle(contextMenuChat.title);
-          setChatEditId(contextMenuChat.id);
-        }}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
-          }`}
-      >
-        <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-        Rename Chat
-      </button>
-      <button
-        onClick={() => {
-          if (hiddenChatIds.includes(contextMenuChat.id)) {
-            unhideChat(contextMenuChat.id);
-          } else {
-            hideChat(contextMenuChat.id);
-            if (activeChatId === contextMenuChat.id) {
-              setActiveChatId(null);
-              setMessages([]);
-            }
-          }
-        }}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
-          }`}
-      >
-        {hiddenChatIds.includes(contextMenuChat.id) ? (
-          <Eye className="w-3.5 h-3.5 text-slate-500" />
-        ) : (
-          <EyeOff className="w-3.5 h-3.5 text-slate-500" />
-        )}
-        {hiddenChatIds.includes(contextMenuChat.id) ? 'Unhide Chat' : 'Hide Chat'}
-      </button>
-      <div className={`my-1 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`} />
-      <button
-        onClick={async () => {
-          if (confirm('Delete this conversation?')) {
-            try {
-              await apiService.deleteChat(token!, contextMenuChat.id);
-              loadChats();
-              if (activeChatId === contextMenuChat.id) {
-                setActiveChatId(null);
-                setMessages([]);
-              }
-            } catch (err) { console.error(err); }
-          }
-        }}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-red-950/40 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-600 hover:text-red-750'
-          }`}
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-        Delete Conversation
-      </button>
-    </div>
-  )
-}
-
-{isSettingsOpen && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className={`w-full max-w-md md:max-w-4xl h-[550px] md:h-[600px] border rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col ${isDark ? 'bg-slate-950 border-slate-800 shadow-violet-950/10' : 'bg-white border-slate-200'
-        }`}>
-        <div className={`flex items-center justify-between p-5 border-b flex-shrink-0 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-          <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-            <Settings className="w-4 h-4 text-violet-400" />
-            Echo Mind Settings
-          </h3>
+      {contextMenuPos && contextMenuChat && (
+        <div
+          className={`fixed z-50 w-52 rounded-2xl border p-1 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${isDark ? 'bg-slate-950/90 border-slate-800 text-slate-200 shadow-violet-950/15' : 'bg-white/95 border-slate-200 text-slate-850 shadow-slate-200/50'
+            }`}
+          style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+        >
           <button
-            onClick={() => setIsSettingsOpen(false)}
-            className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-900 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-100 text-slate-600'}`}
+            onClick={async () => {
+              try {
+                await apiService.updateChat(token!, contextMenuChat.id, { is_pinned: !contextMenuChat.is_pinned });
+                loadChats();
+              } catch (e) { console.error(e); }
+            }}
+            className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
+              }`}
           >
-            <X className="w-4 h-4" />
+            <Pin className={`w-3.5 h-3.5 ${contextMenuChat.is_pinned ? 'text-cyan-400' : 'text-slate-500'}`} />
+            {contextMenuChat.is_pinned ? 'Unpin Conversation' : 'Pin Conversation'}
+          </button>
+          <button
+            onClick={() => {
+              setChatEditTitle(contextMenuChat.title);
+              setChatEditId(contextMenuChat.id);
+            }}
+            className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
+              }`}
+          >
+            <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+            Rename Chat
+          </button>
+          <button
+            onClick={() => {
+              if (hiddenChatIds.includes(contextMenuChat.id)) {
+                unhideChat(contextMenuChat.id);
+              } else {
+                hideChat(contextMenuChat.id);
+                if (activeChatId === contextMenuChat.id) {
+                  setActiveChatId(null);
+                  setMessages([]);
+                }
+              }
+            }}
+            className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-white/5 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
+              }`}
+          >
+            {hiddenChatIds.includes(contextMenuChat.id) ? (
+              <Eye className="w-3.5 h-3.5 text-slate-500" />
+            ) : (
+              <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+            )}
+            {hiddenChatIds.includes(contextMenuChat.id) ? 'Unhide Chat' : 'Hide Chat'}
+          </button>
+          <div className={`my-1 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`} />
+          <button
+            onClick={async () => {
+              if (confirm('Delete this conversation?')) {
+                try {
+                  await apiService.deleteChat(token!, contextMenuChat.id);
+                  loadChats();
+                  if (activeChatId === contextMenuChat.id) {
+                    setActiveChatId(null);
+                    setMessages([]);
+                  }
+                } catch (err) { console.error(err); }
+              }
+            }}
+            className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold rounded-xl text-left transition-all ${isDark ? 'hover:bg-red-950/40 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-600 hover:text-red-750'
+              }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete Conversation
           </button>
         </div>
+      )
+      }
 
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          <div className={`flex md:flex-col border-b md:border-b-0 md:border-r overflow-x-auto md:overflow-x-visible md:w-56 p-1 md:p-4 flex-shrink-0 space-y-0 md:space-y-1 ${isDark ? 'border-slate-900 bg-slate-950' : 'border-slate-150 bg-slate-50'
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md md:max-w-4xl h-[550px] md:h-[600px] border rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col ${isDark ? 'bg-slate-950 border-slate-800 shadow-violet-950/10' : 'bg-white border-slate-200'
             }`}>
-            {[
-              { id: 'profile', label: 'Account Profile', icon: User },
-              { id: 'appearance', label: 'Display Settings', icon: LayoutGrid },
-              { id: 'language', label: 'Language', icon: Mail },
-              { id: 'voice', label: 'Voice Mode', icon: Mic },
-              { id: 'model', label: 'Model Settings', icon: Bot },
-              { id: 'rag', label: 'RAG & Docs', icon: MessageSquare }
-            ].map(tab => {
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSettingsTab(tab.id as any)}
-                  className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:w-full md:text-left transition-all snap-start rounded-none md:rounded-lg flex items-center gap-2.5 ${activeSettingsTab === tab.id
-                    ? 'border-violet-500 text-violet-400 bg-violet-600/5'
-                    : isDark ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                >
-                  <TabIcon className="w-4 h-4 hidden md:inline" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+            <div className={`flex items-center justify-between p-5 border-b flex-shrink-0 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+              <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                <Settings className="w-4 h-4 text-violet-400" />
+                Echo Mind Settings
+              </h3>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-900 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-100 text-slate-600'}`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-          <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto bg-slate-900/10 scrollbar-thin scrollbar-thumb-slate-900">
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+              <div className={`flex md:flex-col border-b md:border-b-0 md:border-r overflow-x-auto md:overflow-x-visible md:w-56 p-1 md:p-4 flex-shrink-0 space-y-0 md:space-y-1 ${isDark ? 'border-slate-900 bg-slate-950' : 'border-slate-150 bg-slate-50'
+                }`}>
+                {[
+                  { id: 'profile', label: 'Account Profile', icon: User },
+                  { id: 'appearance', label: 'Display Settings', icon: LayoutGrid },
+                  { id: 'language', label: 'Language', icon: Mail },
+                  { id: 'voice', label: 'Voice Mode', icon: Mic },
+                  { id: 'model', label: 'Model Settings', icon: Bot },
+                  { id: 'rag', label: 'RAG & Docs', icon: MessageSquare }
+                ].map(tab => {
+                  const TabIcon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveSettingsTab(tab.id as any)}
+                      className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:w-full md:text-left transition-all snap-start rounded-none md:rounded-lg flex items-center gap-2.5 ${activeSettingsTab === tab.id
+                        ? 'border-violet-500 text-violet-400 bg-violet-600/5'
+                        : isDark ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                    >
+                      <TabIcon className="w-4 h-4 hidden md:inline" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-            {activeSettingsTab === 'profile' && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                <div>
-                  <h4 className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Account Profile</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Customize your username representation and account avatar.</p>
-                </div>
+              <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto bg-slate-900/10 scrollbar-thin scrollbar-thumb-slate-900">
 
-                <div className={`flex items-center gap-5 border p-5 rounded-2xl ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                  <div className="relative group flex-shrink-0">
-                    <div className={`w-18 h-18 rounded-full border-2 overflow-hidden flex items-center justify-center ${isDark ? 'bg-slate-850 border-slate-700' : 'bg-slate-200 border-slate-300'}`}>
-                      {profileSettings.profilePictureUrl ? (
-                        <img
-                          src={profileSettings.profilePictureUrl.startsWith('http') ? profileSettings.profilePictureUrl : `http://localhost:8000${profileSettings.profilePictureUrl}`}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-7 h-7 text-slate-500" />
-                      )}
+                {activeSettingsTab === 'profile' && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    <div>
+                      <h4 className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Account Profile</h4>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Customize your username representation and account avatar.</p>
                     </div>
-                    <label className="absolute bottom-0 right-0 bg-violet-600 hover:bg-violet-550 p-1.5 rounded-full border border-slate-950 cursor-pointer shadow-md transition-all">
-                      <Edit2 className="w-3 h-3 text-white" />
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            try {
-                              const res = await apiService.uploadProfilePicture(token!, e.target.files[0]);
-                              setProfileSettings({ profilePictureUrl: res.profile_picture_url });
-                            } catch (error) {
-                              console.error('Failed to upload', error);
-                            }
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                  <div>
-                    <span className={`inline-block px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase tracking-wider ${isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600'}`}>
-                      Owner
-                    </span>
-                    <h5 className={`text-xs font-bold mt-1 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {profileSettings.username || 'AetherMind User'}
-                    </h5>
-                    <p className="text-[10px] text-slate-500">{user?.email}</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Name</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={profileSettings.username}
-                        onChange={(e) => setProfileSettings({ username: e.target.value })}
-                        placeholder="Enter username"
-                        className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
-                      />
+                    <div className={`flex items-center gap-5 border p-5 rounded-2xl ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className="relative group flex-shrink-0">
+                        <div className={`w-18 h-18 rounded-full border-2 overflow-hidden flex items-center justify-center ${isDark ? 'bg-slate-850 border-slate-700' : 'bg-slate-200 border-slate-300'}`}>
+                          {profileSettings.profilePictureUrl ? (
+                            <img
+                              src={profileSettings.profilePictureUrl.startsWith('http') ? profileSettings.profilePictureUrl : `http://localhost:8000${profileSettings.profilePictureUrl}`}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-7 h-7 text-slate-500" />
+                          )}
+                        </div>
+                        <label className="absolute bottom-0 right-0 bg-violet-600 hover:bg-violet-550 p-1.5 rounded-full border border-slate-950 cursor-pointer shadow-md transition-all">
+                          <Edit2 className="w-3 h-3 text-white" />
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                try {
+                                  const res = await apiService.uploadProfilePicture(token!, e.target.files[0]);
+                                  setProfileSettings({ profilePictureUrl: res.profile_picture_url });
+                                } catch (error) {
+                                  console.error('Failed to upload', error);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <div>
+                        <span className={`inline-block px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase tracking-wider ${isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600'}`}>
+                          Owner
+                        </span>
+                        <h5 className={`text-xs font-bold mt-1 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          {profileSettings.username || 'AetherMind User'}
+                        </h5>
+                        <p className="text-[10px] text-slate-500">{user?.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Name</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={profileSettings.username}
+                            onChange={(e) => setProfileSettings({ username: e.target.value })}
+                            placeholder="Enter username"
+                            className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-900'
+                              }`}
+                          />
+                          <button
+                            onClick={async () => {
+                              try {
+                                await apiService.updateProfile(token!, { username: profileSettings.username });
+                                alert('Username saved successfully!');
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            className="px-4 py-2 bg-violet-600 hover:bg-violet-550 rounded-xl text-xs text-white font-bold transition-colors"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Email Address</label>
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={user?.email || ''}
+                            disabled
+                            className={`w-full pl-3 pr-10 py-2 border rounded-xl text-xs cursor-not-allowed ${isDark ? 'bg-slate-900/30 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-550'
+                              }`}
+                          />
+                          <Lock className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                       <button
-                        onClick={async () => {
-                          try {
-                            await apiService.updateProfile(token!, { username: profileSettings.username });
-                            alert('Username saved successfully!');
-                          } catch (err) {
-                            console.error(err);
-                          }
-                        }}
-                        className="px-4 py-2 bg-violet-600 hover:bg-violet-550 rounded-xl text-xs text-white font-bold transition-colors"
+                        onClick={() => alert('Change password functionality requested.')}
+                        className={`flex items-center gap-3 p-4 border rounded-xl hover:border-violet-500/20 text-left transition-all ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900' : 'bg-slate-50 border-slate-150 hover:bg-slate-100'
+                          }`}
                       >
-                        Save
+                        <div className={`p-2 border rounded-lg ${isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'}`}>
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Change Password</p>
+                          <p className="text-[9px] text-slate-550">Secure your authentication credentials.</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => alert('Transfer ownership flow initiated.')}
+                        className={`flex items-center gap-3 p-4 border rounded-xl hover:border-violet-500/20 text-left transition-all ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900' : 'bg-slate-50 border-slate-150 hover:bg-slate-100'
+                          }`}
+                      >
+                        <div className={`p-2 border rounded-lg ${isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'}`}>
+                          <User className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Transfer Ownership</p>
+                          <p className="text-[9px] text-slate-550">Assign primary ownership credentials.</p>
+                        </div>
                       </button>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Email Address</label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        value={user?.email || ''}
-                        disabled
-                        className={`w-full pl-3 pr-10 py-2 border rounded-xl text-xs cursor-not-allowed ${isDark ? 'bg-slate-900/30 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-550'
+                    <div className={`border rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap ${isDark ? 'border-red-950/20 bg-red-950/5' : 'border-red-100 bg-red-50/20'}`}>
+                      <div>
+                        <p className="text-xs font-bold text-red-500">Delete Account</p>
+                        <p className="text-[9px] text-slate-500 mt-0.5">Process the deletion of your account and metadata.</p>
+                      </div>
+                      <button
+                        onClick={() => alert('Support ticket requested for account removal.')}
+                        className="px-3 py-1.5 bg-red-650/15 hover:bg-red-550/20 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold transition-all"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+
+                    <div className={`pt-2 border-t space-y-2 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <p className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Tutorials</p>
+                      <a
+                        href="#docs"
+                        onClick={(e) => { e.preventDefault(); alert('API Documentation is available in AGENTS.md'); }}
+                        className={`flex items-center justify-between p-3.5 border rounded-xl transition-colors ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900/60' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                           }`}
-                      />
-                      <Lock className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                      >
+                        <div className="flex items-center gap-3">
+                          <Bot className="w-4 h-4 text-violet-400" />
+                          <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>API documentation</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                      </a>
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <button
-                    onClick={() => alert('Change password functionality requested.')}
-                    className={`flex items-center gap-3 p-4 border rounded-xl hover:border-violet-500/20 text-left transition-all ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900' : 'bg-slate-50 border-slate-150 hover:bg-slate-100'
-                      }`}
-                  >
-                    <div className={`p-2 border rounded-lg ${isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'}`}>
-                      <Lock className="w-3.5 h-3.5" />
+                {activeSettingsTab === 'appearance' && (
+                  <div className="space-y-5">
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Theme</label>
+                      <div className={`flex p-1 rounded-xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
+                        <button
+                          onClick={() => setAppearanceSettings({ theme: 'dark' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${appearanceSettings.theme === 'dark' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                          Dark
+                        </button>
+                        <button
+                          onClick={() => setAppearanceSettings({ theme: 'light' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${appearanceSettings.theme === 'light' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                          Light
+                        </button>
+                      </div>
                     </div>
                     <div>
-                      <p className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Change Password</p>
-                      <p className="text-[9px] text-slate-550">Secure your authentication credentials.</p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => alert('Transfer ownership flow initiated.')}
-                    className={`flex items-center gap-3 p-4 border rounded-xl hover:border-violet-500/20 text-left transition-all ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900' : 'bg-slate-50 border-slate-150 hover:bg-slate-100'
-                      }`}
-                  >
-                    <div className={`p-2 border rounded-lg ${isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'}`}>
-                      <User className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <p className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Transfer Ownership</p>
-                      <p className="text-[9px] text-slate-550">Assign primary ownership credentials.</p>
-                    </div>
-                  </button>
-                </div>
-
-                <div className={`border rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap ${isDark ? 'border-red-950/20 bg-red-950/5' : 'border-red-100 bg-red-50/20'}`}>
-                  <div>
-                    <p className="text-xs font-bold text-red-500">Delete Account</p>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Process the deletion of your account and metadata.</p>
-                  </div>
-                  <button
-                    onClick={() => alert('Support ticket requested for account removal.')}
-                    className="px-3 py-1.5 bg-red-650/15 hover:bg-red-550/20 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold transition-all"
-                  >
-                    Delete Account
-                  </button>
-                </div>
-
-                <div className={`pt-2 border-t space-y-2 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <p className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Tutorials</p>
-                  <a
-                    href="#docs"
-                    onClick={(e) => { e.preventDefault(); alert('API Documentation is available in AGENTS.md'); }}
-                    className={`flex items-center justify-between p-3.5 border rounded-xl transition-colors ${isDark ? 'bg-slate-900/40 border-slate-800 hover:bg-slate-900/60' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Bot className="w-4 h-4 text-violet-400" />
-                      <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>API documentation</span>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {activeSettingsTab === 'appearance' && (
-              <div className="space-y-5">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Theme</label>
-                  <div className={`flex p-1 rounded-xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
-                    <button
-                      onClick={() => setAppearanceSettings({ theme: 'dark' })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${appearanceSettings.theme === 'dark' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                    >
-                      Dark
-                    </button>
-                    <button
-                      onClick={() => setAppearanceSettings({ theme: 'light' })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${appearanceSettings.theme === 'light' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                    >
-                      Light
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-2.5 ${isDark ? 'text-slate-550' : 'text-slate-650'}`}>Interface Style</label>
+                      <label className={`block text-[10px] uppercase font-bold mb-2.5 ${isDark ? 'text-slate-550' : 'text-slate-650'}`}>Interface Style</label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {[
                           { id: 'Classic', icon: LayoutTemplate, desc: 'Standard UI' },
@@ -1931,430 +1938,429 @@ export default function Home() {
                           const IconComp = style.icon;
                           const isActive = appearanceSettings.interfaceStyle === style.id;
                           return (
-                          <button
-                            key={style.id}
-                            onClick={() => setAppearanceSettings({ interfaceStyle: style.id as any })}
-                            className={`p-3.5 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02] flex items-center gap-3 ${
-                              isActive
-                              ? 'border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]'
-                              : isDark ? 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                              }`}
-                          >
-                            <div className={`p-2 rounded-xl flex-shrink-0 ${
-                              isActive ? 'bg-violet-500 text-white shadow-md' : isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
-                            }`}>
-                              <IconComp className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <span className={`block text-xs font-bold ${isActive ? 'text-violet-400' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>{style.id}</span>
-                              <span className={`block text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{style.desc}</span>
-                            </div>
-                          </button>
-                        )})}
+                            <button
+                              key={style.id}
+                              onClick={() => setAppearanceSettings({ interfaceStyle: style.id as any })}
+                              className={`p-3.5 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02] flex items-center gap-3 ${isActive
+                                ? 'border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]'
+                                : isDark ? 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                                }`}
+                            >
+                              <div className={`p-2 rounded-xl flex-shrink-0 ${isActive ? 'bg-violet-500 text-white shadow-md' : isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                <IconComp className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <span className={`block text-xs font-bold ${isActive ? 'text-violet-400' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>{style.id}</span>
+                                <span className={`block text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{style.desc}</span>
+                              </div>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
 
-                <div className={`pt-4 border-t space-y-3.5 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4 text-violet-400" />
-                    <h4 className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Chats Settings</h4>
-                  </div>
+                    <div className={`pt-4 border-t space-y-3.5 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4 text-violet-400" />
+                        <h4 className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Chats Settings</h4>
+                      </div>
 
-                  {/* Lock Chats Toggle */}
-                  <div className={`flex items-center justify-between p-3.5 border rounded-2xl ${isDark ? 'bg-slate-950 border-slate-900' : 'bg-slate-50 border-slate-200'
-                    }`}>
-                    <div>
-                      <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Lock Hidden Chats</label>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">If active, hidden chats are hidden from the sidebar list.</span>
-                    </div>
-                    <button
-                      onClick={() => setLockChats(!lockChats)}
-                      className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors flex-shrink-0 ${lockChats ? 'bg-violet-600' : 'bg-slate-800'}`}
-                    >
-                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${lockChats ? 'translate-x-4' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
+                      {/* Lock Chats Toggle */}
+                      <div className={`flex items-center justify-between p-3.5 border rounded-2xl ${isDark ? 'bg-slate-950 border-slate-900' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                        <div>
+                          <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Lock Hidden Chats</label>
+                          <span className="text-[10px] text-slate-500 block mt-0.5">If active, hidden chats are hidden from the sidebar list.</span>
+                        </div>
+                        <button
+                          onClick={() => setLockChats(!lockChats)}
+                          className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors flex-shrink-0 ${lockChats ? 'bg-violet-600' : 'bg-slate-800'}`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${lockChats ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
 
-                  <div>
-                    <label className={`block text-xs font-bold mb-1.5 flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      <EyeOff className="w-3.5 h-3.5 text-slate-400" /> Hidden Chats List
-                    </label>
-                    <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-900">
-                      {chats.filter(c => hiddenChatIds.includes(c.id)).length === 0 ? (
-                        <p className="text-[10px] text-slate-550 italic">No hidden chats.</p>
-                      ) : (
-                        chats.filter(c => hiddenChatIds.includes(c.id)).map(chat => (
-                          <div key={chat.id} className={`flex items-center justify-between p-2.5 border rounded-xl ${isDark ? 'bg-slate-950/60 border-slate-900' : 'bg-slate-550 border-slate-200'
-                            }`}>
-                            <span className={`text-xs truncate max-w-[180px] font-semibold ${isDark ? 'text-slate-350' : 'text-slate-700'}`}>{chat.title}</span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => unhideChat(chat.id)}
-                                className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:text-emerald-400 hover:bg-slate-900' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100'}`}
-                                title="Unhide Chat"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (confirm('Delete this hidden conversation?')) {
-                                    try {
-                                      await apiService.deleteChat(token!, chat.id);
-                                      unhideChat(chat.id);
-                                      loadChats();
-                                      if (activeChatId === chat.id) {
-                                        setActiveChatId(null);
-                                        setMessages([]);
-                                      }
-                                    } catch (err) { console.error(err); }
-                                  }
-                                }}
-                                className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:text-red-400 hover:bg-slate-900' : 'text-slate-500 hover:text-red-650 hover:bg-slate-100'}`}
-                                title="Delete Chat"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Delete All Conversations Global Area */}
-                  <div className={`mt-4 p-4 border rounded-2xl ${isHacker
-                    ? 'border-red-900/40 bg-red-950/10'
-                    : isDark ? 'border-red-950/20 bg-red-950/5' : 'border-red-100 bg-red-50/20'
-                    }`}>
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div>
-                        <p className="text-xs font-bold text-red-500">Delete All Conversations</p>
-                        <p className="text-[10px] text-slate-550 mt-0.5 font-semibold">Wipe your entire conversation history and message logs.</p>
+                        <label className={`block text-xs font-bold mb-1.5 flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          <EyeOff className="w-3.5 h-3.5 text-slate-400" /> Hidden Chats List
+                        </label>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-900">
+                          {chats.filter(c => hiddenChatIds.includes(c.id)).length === 0 ? (
+                            <p className="text-[10px] text-slate-550 italic">No hidden chats.</p>
+                          ) : (
+                            chats.filter(c => hiddenChatIds.includes(c.id)).map(chat => (
+                              <div key={chat.id} className={`flex items-center justify-between p-2.5 border rounded-xl ${isDark ? 'bg-slate-950/60 border-slate-900' : 'bg-slate-550 border-slate-200'
+                                }`}>
+                                <span className={`text-xs truncate max-w-[180px] font-semibold ${isDark ? 'text-slate-350' : 'text-slate-700'}`}>{chat.title}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => unhideChat(chat.id)}
+                                    className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:text-emerald-400 hover:bg-slate-900' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100'}`}
+                                    title="Unhide Chat"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm('Delete this hidden conversation?')) {
+                                        try {
+                                          await apiService.deleteChat(token!, chat.id);
+                                          unhideChat(chat.id);
+                                          loadChats();
+                                          if (activeChatId === chat.id) {
+                                            setActiveChatId(null);
+                                            setMessages([]);
+                                          }
+                                        } catch (err) { console.error(err); }
+                                      }
+                                    }}
+                                    className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:text-red-400 hover:bg-slate-900' : 'text-slate-500 hover:text-red-650 hover:bg-slate-100'}`}
+                                    title="Delete Chat"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={handleDeleteAllChats}
-                        disabled={chats.length === 0}
-                        className="px-4 py-2 bg-red-650/15 hover:bg-red-550/20 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Delete All Chats
-                      </button>
+
+                      {/* Delete All Conversations Global Area */}
+                      <div className={`mt-4 p-4 border rounded-2xl ${isHacker
+                        ? 'border-red-900/40 bg-red-950/10'
+                        : isDark ? 'border-red-950/20 bg-red-950/5' : 'border-red-100 bg-red-50/20'
+                        }`}>
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div>
+                            <p className="text-xs font-bold text-red-500">Delete All Conversations</p>
+                            <p className="text-[10px] text-slate-550 mt-0.5 font-semibold">Wipe your entire conversation history and message logs.</p>
+                          </div>
+                          <button
+                            onClick={handleDeleteAllChats}
+                            disabled={chats.length === 0}
+                            className="px-4 py-2 bg-red-650/15 hover:bg-red-550/20 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Delete All Chats
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: LANGUAGE */}
-            {activeSettingsTab === 'language' && (
-              <div className="space-y-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Text Language</label>
-                  <select
-                    value={languageSettings.textLanguage}
-                    onChange={(e) => setLanguageSettings({ textLanguage: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                  >
-                    {['English', 'Hindi', 'Telugu', 'Marathi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Punjabi'].map(lang => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Voice Language</label>
-                  <select
-                    value={languageSettings.voiceLanguage}
-                    onChange={(e) => setLanguageSettings({ voiceLanguage: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                  >
-                    {['English', 'Hindi', 'Telugu', 'Marathi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Punjabi'].map(lang => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: VOICE */}
-            {activeSettingsTab === 'voice' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Accent (English)</label>
-                    <select
-                      value={voiceSettings.accent}
-                      onChange={(e) => setVoiceSettings({ accent: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                    >
-                      {['American', 'British', 'Indian', 'Australian'].map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Personality</label>
-                    <select
-                      value={voiceSettings.personality}
-                      onChange={(e) => setVoiceSettings({ personality: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                    >
-                      {['Professional', 'Friendly', 'Calm', 'Energetic', 'Robotic', 'Male', 'Female'].map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Wake Word</label>
-                  <select
-                    value={voiceSettings.wakeWord}
-                    onChange={(e) => setVoiceSettings({ wakeWord: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                  >
-                    <option value="">Disabled (None)</option>
-                    {['Samrat', 'Aether', 'Echo', 'Friday'].map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-                <div className={`space-y-3 pt-2 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
-                      <span>Speed</span><span className="text-violet-400 font-bold">{voiceSettings.speed}x</span>
-                    </div>
-                    <input type="range" min="0.5" max="2.0" step="0.1" value={voiceSettings.speed} onChange={(e) => setVoiceSettings({ speed: parseFloat(e.target.value) })} className="w-full accent-violet-500" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
-                      <span>Pitch</span><span className="text-violet-400 font-bold">{voiceSettings.pitch}</span>
-                    </div>
-                    <input type="range" min="0.5" max="2.0" step="0.1" value={voiceSettings.pitch} onChange={(e) => setVoiceSettings({ pitch: parseFloat(e.target.value) })} className="w-full accent-violet-500" />
-                  </div>
-                </div>
-                <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <div>
-                    <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Continuous Mode</label>
-                    <span className="text-[10px] text-slate-550">Keep microphone active after assistant responses</span>
-                  </div>
-                  <button
-                    onClick={() => setVoiceSettings({ continuousMode: !voiceSettings.continuousMode })}
-                    className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${voiceSettings.continuousMode ? 'bg-violet-600' : 'bg-slate-800'}`}
-                  >
-                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${voiceSettings.continuousMode ? 'translate-x-4' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: MODEL SETTINGS */}
-            {activeSettingsTab === 'model' && (
-              <div className="space-y-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model</label>
-                  <select
-                    value={modelSettings.modelName}
-                    onChange={(e) => setModelSettings({ modelName: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                  >
-                      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                      <option value="cohere-command-r">Cohere Command-R</option>
-                      <option value="cohere-command-r-plus">Cohere Command-R+</option>
-                      <option value="cohere-command-light">Cohere Command-Light</option>
-                      <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Efficient)</option>
-                      <option value="gpt-4o">OpenAI GPT-4o (Premium)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
-                    <span>Temperature</span>
-                    <span className="text-violet-400 font-bold font-mono">{modelSettings.temperature}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.0"
-                    max="1.0"
-                    step="0.1"
-                    value={modelSettings.temperature}
-                    onChange={(e) => setModelSettings({ temperature: parseFloat(e.target.value) })}
-                    className="w-full accent-violet-500 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>System Instructions Override</label>
-                  <textarea
-                    value={modelSettings.systemPrompt}
-                    onChange={(e) => setModelSettings({ systemPrompt: e.target.value })}
-                    placeholder="e.g. You are a helpful code assistant..."
-                    rows={3}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-250 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                      }`}
-                  />
-                </div>
-
-                <div className={`pt-2 border-t space-y-3 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <h4 className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-550' : 'text-slate-400'}`}>API Credentials (Stored locally)</h4>
-                  <div>
-                    <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Gemini API Key</label>
-                    <input
-                      type="password"
-                      value={modelSettings.geminiApiKey}
-                      onChange={(e) => setModelSettings({ geminiApiKey: e.target.value })}
-                      placeholder="AIzaSy..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                        }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cohere API Key</label>
-                    <input
-                      type="password"
-                      value={modelSettings.cohereApiKey}
-                      onChange={(e) => setModelSettings({ cohereApiKey: e.target.value })}
-                      placeholder="Zi..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                        }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>OpenAI API Key</label>
-                    <input
-                      type="password"
-                      value={modelSettings.openaiApiKey}
-                      onChange={(e) => setModelSettings({ openaiApiKey: e.target.value })}
-                      placeholder="sk-proj-..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                        }`}
-                    />
-                  </div>
-                    <div>
-                      <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Replicate API Key (Image/Video Gen)</label>
-                    <input
-                      type="password"
-                      value={modelSettings.replicateApiKey}
-                      onChange={(e) => setModelSettings({ replicateApiKey: e.target.value })}
-                      placeholder="r8_..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                        }`}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: RAG SETTINGS */}
-            {activeSettingsTab === 'rag' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Enable Vector Context RAG</label>
-                    <span className="text-[10px] text-slate-500">Query relevant chunks from uploaded documents</span>
-                  </div>
-                  <button
-                    onClick={() => setModelSettings({ enableRag: !modelSettings.enableRag })}
-                    className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${modelSettings.enableRag ? 'bg-violet-600' : 'bg-slate-800'}`}
-                  >
-                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${modelSettings.enableRag ? 'translate-x-4' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                {modelSettings.enableRag && (
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
-                      <span>Retrieved Chunk Count (k)</span>
-                      <span className="text-violet-400 font-bold font-mono">{modelSettings.ragK}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      step="1"
-                      value={modelSettings.ragK}
-                      onChange={(e) => setModelSettings({ ragK: parseInt(e.target.value) })}
-                      className="w-full accent-violet-500 cursor-pointer"
-                    />
                   </div>
                 )}
 
-                <div className={`pt-2 border-t space-y-3 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                  <label className={`block text-[10px] uppercase font-bold ${isDark ? 'text-slate-550' : 'text-slate-400'}`}>Ingest Context Document (PDF, TXT)</label>
-                  <div className={`flex flex-col items-center justify-center p-6 border border-dashed rounded-2xl text-center hover:border-violet-650 transition-colors relative ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
-                    }`}>
-                    <input
-                      type="file"
-                      accept=".pdf,.txt"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          setSelectedFile(e.target.files[0]);
-                        }
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Upload className="w-8 h-8 text-violet-400/80 mb-2" />
-                    <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      {selectedFile ? selectedFile.name : 'Select or drop a file here'}
-                    </p>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Files are parsed, chunked, and embedded into local vector database.
-                    </p>
+                {/* TAB: LANGUAGE */}
+                {activeSettingsTab === 'language' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Text Language</label>
+                      <select
+                        value={languageSettings.textLanguage}
+                        onChange={(e) => setLanguageSettings({ textLanguage: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                      >
+                        {['English', 'Hindi', 'Telugu', 'Marathi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Punjabi'].map(lang => (
+                          <option key={lang} value={lang}>{lang}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Voice Language</label>
+                      <select
+                        value={languageSettings.voiceLanguage}
+                        onChange={(e) => setLanguageSettings({ voiceLanguage: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                      >
+                        {['English', 'Hindi', 'Telugu', 'Marathi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Punjabi'].map(lang => (
+                          <option key={lang} value={lang}>{lang}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                )}
 
-                  {selectedFile && (
-                    <button
-                      onClick={async () => {
-                        if (!selectedFile) return;
-                        setIsUploading(true);
-                        setUploadStatus('Processing document...');
-                        try {
-                          const res = await apiService.uploadDocument(token!, selectedFile, modelSettings);
-                          setUploadStatus(`Success: ${res.filename} indexed (${res.chunks_indexed} chunks)`);
-                          setSelectedFile(null);
-                        } catch (err: any) {
-                          console.error(err);
-                          setUploadStatus(`Error: ${err.message || 'Failed to upload document'}`);
-                        } finally {
-                          setIsUploading(false);
-                        }
-                      }}
-                      disabled={isUploading}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-550 text-white rounded-xl text-xs font-bold disabled:bg-slate-800 transition-all shadow-md cursor-pointer"
-                    >
-                      {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start Indexing Ingest'}
-                    </button>
-                  )}
+                {/* TAB: VOICE */}
+                {activeSettingsTab === 'voice' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Accent (English)</label>
+                        <select
+                          value={voiceSettings.accent}
+                          onChange={(e) => setVoiceSettings({ accent: e.target.value })}
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                        >
+                          {['American', 'British', 'Indian', 'Australian'].map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Personality</label>
+                        <select
+                          value={voiceSettings.personality}
+                          onChange={(e) => setVoiceSettings({ personality: e.target.value })}
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                        >
+                          {['Professional', 'Friendly', 'Calm', 'Energetic', 'Robotic', 'Male', 'Female'].map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Wake Word</label>
+                      <select
+                        value={voiceSettings.wakeWord}
+                        onChange={(e) => setVoiceSettings({ wakeWord: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                      >
+                        <option value="">Disabled (None)</option>
+                        {['Samrat', 'Aether', 'Echo', 'Friday'].map(w => <option key={w} value={w}>{w}</option>)}
+                      </select>
+                    </div>
+                    <div className={`space-y-3 pt-2 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <div>
+                        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
+                          <span>Speed</span><span className="text-violet-400 font-bold">{voiceSettings.speed}x</span>
+                        </div>
+                        <input type="range" min="0.5" max="2.0" step="0.1" value={voiceSettings.speed} onChange={(e) => setVoiceSettings({ speed: parseFloat(e.target.value) })} className="w-full accent-violet-500" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
+                          <span>Pitch</span><span className="text-violet-400 font-bold">{voiceSettings.pitch}</span>
+                        </div>
+                        <input type="range" min="0.5" max="2.0" step="0.1" value={voiceSettings.pitch} onChange={(e) => setVoiceSettings({ pitch: parseFloat(e.target.value) })} className="w-full accent-violet-500" />
+                      </div>
+                    </div>
+                    <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <div>
+                        <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Continuous Mode</label>
+                        <span className="text-[10px] text-slate-550">Keep microphone active after assistant responses</span>
+                      </div>
+                      <button
+                        onClick={() => setVoiceSettings({ continuousMode: !voiceSettings.continuousMode })}
+                        className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${voiceSettings.continuousMode ? 'bg-violet-600' : 'bg-slate-800'}`}
+                      >
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${voiceSettings.continuousMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                  {uploadStatus && (
-                    <p className={`text-[10px] text-center font-bold ${uploadStatus.startsWith('Error') ? 'text-red-400' : 'text-violet-400'}`}>
-                      {uploadStatus}
-                    </p>
-                  )}
-                </div>
+                {/* TAB: MODEL SETTINGS */}
+                {activeSettingsTab === 'model' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model</label>
+                      <select
+                        value={modelSettings.modelName}
+                        onChange={(e) => setModelSettings({ modelName: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                      >
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                        <option value="cohere-command-r">Cohere Command-R</option>
+                        <option value="cohere-command-r-plus">Cohere Command-R+</option>
+                        <option value="cohere-command-light">Cohere Command-Light</option>
+                        <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Efficient)</option>
+                        <option value="gpt-4o">OpenAI GPT-4o (Premium)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
+                        <span>Temperature</span>
+                        <span className="text-violet-400 font-bold font-mono">{modelSettings.temperature}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.0"
+                        max="1.0"
+                        step="0.1"
+                        value={modelSettings.temperature}
+                        onChange={(e) => setModelSettings({ temperature: parseFloat(e.target.value) })}
+                        className="w-full accent-violet-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>System Instructions Override</label>
+                      <textarea
+                        value={modelSettings.systemPrompt}
+                        onChange={(e) => setModelSettings({ systemPrompt: e.target.value })}
+                        placeholder="e.g. You are a helpful code assistant..."
+                        rows={3}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-250 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          }`}
+                      />
+                    </div>
+
+                    <div className={`pt-2 border-t space-y-3 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <h4 className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-550' : 'text-slate-400'}`}>API Credentials (Stored locally)</h4>
+                      <div>
+                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Gemini API Key</label>
+                        <input
+                          type="password"
+                          value={modelSettings.geminiApiKey}
+                          onChange={(e) => setModelSettings({ geminiApiKey: e.target.value })}
+                          placeholder="AIzaSy..."
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                            }`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cohere API Key</label>
+                        <input
+                          type="password"
+                          value={modelSettings.cohereApiKey}
+                          onChange={(e) => setModelSettings({ cohereApiKey: e.target.value })}
+                          placeholder="Zi..."
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                            }`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>OpenAI API Key</label>
+                        <input
+                          type="password"
+                          value={modelSettings.openaiApiKey}
+                          onChange={(e) => setModelSettings({ openaiApiKey: e.target.value })}
+                          placeholder="sk-proj-..."
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                            }`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Replicate API Key (Image/Video Gen)</label>
+                        <input
+                          type="password"
+                          value={modelSettings.replicateApiKey}
+                          onChange={(e) => setModelSettings({ replicateApiKey: e.target.value })}
+                          placeholder="r8_..."
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                            }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: RAG SETTINGS */}
+                {activeSettingsTab === 'rag' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Enable Vector Context RAG</label>
+                        <span className="text-[10px] text-slate-500">Query relevant chunks from uploaded documents</span>
+                      </div>
+                      <button
+                        onClick={() => setModelSettings({ enableRag: !modelSettings.enableRag })}
+                        className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${modelSettings.enableRag ? 'bg-violet-600' : 'bg-slate-800'}`}
+                      >
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${modelSettings.enableRag ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    {modelSettings.enableRag && (
+                      <div>
+                        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
+                          <span>Retrieved Chunk Count (k)</span>
+                          <span className="text-violet-400 font-bold font-mono">{modelSettings.ragK}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="5"
+                          step="1"
+                          value={modelSettings.ragK}
+                          onChange={(e) => setModelSettings({ ragK: parseInt(e.target.value) })}
+                          className="w-full accent-violet-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
+
+                    <div className={`pt-2 border-t space-y-3 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
+                      <label className={`block text-[10px] uppercase font-bold ${isDark ? 'text-slate-550' : 'text-slate-400'}`}>Ingest Context Document (PDF, TXT)</label>
+                      <div className={`flex flex-col items-center justify-center p-6 border border-dashed rounded-2xl text-center hover:border-violet-650 transition-colors relative ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                        <input
+                          type="file"
+                          accept=".pdf,.txt"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              setSelectedFile(e.target.files[0]);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <Upload className="w-8 h-8 text-violet-400/80 mb-2" />
+                        <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {selectedFile ? selectedFile.name : 'Select or drop a file here'}
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Files are parsed, chunked, and embedded into local vector database.
+                        </p>
+                      </div>
+
+                      {selectedFile && (
+                        <button
+                          onClick={async () => {
+                            if (!selectedFile) return;
+                            setIsUploading(true);
+                            setUploadStatus('Processing document...');
+                            try {
+                              const res = await apiService.uploadDocument(token!, selectedFile, modelSettings);
+                              setUploadStatus(`Success: ${res.filename} indexed (${res.chunks_indexed} chunks)`);
+                              setSelectedFile(null);
+                            } catch (err: any) {
+                              console.error(err);
+                              setUploadStatus(`Error: ${err.message || 'Failed to upload document'}`);
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }}
+                          disabled={isUploading}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-550 text-white rounded-xl text-xs font-bold disabled:bg-slate-800 transition-all shadow-md cursor-pointer"
+                        >
+                          {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start Indexing Ingest'}
+                        </button>
+                      )}
+
+                      {uploadStatus && (
+                        <p className={`text-[10px] text-center font-bold ${uploadStatus.startsWith('Error') ? 'text-red-400' : 'text-violet-400'}`}>
+                          {uploadStatus}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Footer */}
+            <div className={`p-4 border-t text-center flex-shrink-0 ${isDark ? 'bg-slate-900/60 border-slate-900' : 'bg-slate-50 border-slate-150'}`}>
+              <button
+                onClick={() => {
+                  setUploadStatus(null);
+                  setIsSettingsOpen(false);
+                }}
+                className={`px-6 py-2 border rounded-xl text-xs font-bold transition-colors cursor-pointer ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+              >
+                Close Panel
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className={`p-4 border-t text-center flex-shrink-0 ${isDark ? 'bg-slate-900/60 border-slate-900' : 'bg-slate-50 border-slate-150'}`}>
-          <button
-            onClick={() => {
-              setUploadStatus(null);
-              setIsSettingsOpen(false);
-            }}
-            className={`px-6 py-2 border rounded-xl text-xs font-bold transition-colors cursor-pointer ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
-          >
-            Close Panel
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+      )
+      }
     </div >
   );
 
-return chatContent;
+  return chatContent;
 }

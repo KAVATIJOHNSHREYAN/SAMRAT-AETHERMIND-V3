@@ -141,11 +141,14 @@ async def chat(
     else:
         # Load local gemini model config
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=effective_api_key)
-            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+            from google import genai
+            from google.genai import types as genai_types
+            client = genai.Client(api_key=effective_api_key)
             prompt = f"Answer the user's question using only the information from this document.\n\nDocument:\n{context}\n\nQuestion: {request.question}"
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=prompt
+            )
             answer = response.text
         except Exception as e:
             answer = f"Error generating answer: {str(e)}"
