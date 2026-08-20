@@ -4,6 +4,7 @@ import json
 import logging
 import asyncio
 import httpx
+from datetime import datetime
 from typing import AsyncGenerator, List, Dict, Optional, Any
 from app.config import settings
 
@@ -230,7 +231,7 @@ class AIRouter:
                                         genai_types.Part.from_bytes(data=raw_bytes, mime_type=att["type"])
                                     )
 
-                    content_parts = ["\n".join(text_parts)] + multimodal_parts
+                    content_parts: List[Any] = [genai_types.Part.from_text(text="\n".join(text_parts))] + multimodal_parts
                     config = genai_types.GenerateContentConfig(temperature=temperature)
 
                     response = await asyncio.to_thread(
@@ -253,7 +254,7 @@ class AIRouter:
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=api_key)
 
-                    messages = [{"role": "system", "content": system_instructions}]
+                    messages: List[Any] = [{"role": "system", "content": system_instructions}]
                     for msg in chat_history[-5:]:
                         role = "assistant" if msg["sender"] == "assistant" else "user"
                         messages.append({"role": role, "content": msg["content"]})
@@ -294,8 +295,9 @@ class AIRouter:
                     )
 
                     async for event in response:
-                        if hasattr(event, "text") and event.text:
-                            yield event.text
+                        event_any: Any = event
+                        if hasattr(event_any, "text") and event_any.text:
+                            yield event_any.text
 
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return
@@ -349,7 +351,7 @@ class AIRouter:
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
 
-                    messages = [{"role": "system", "content": system_instructions}]
+                    messages: List[Any] = [{"role": "system", "content": system_instructions}]
                     for msg in chat_history[-5:]:
                         role = "assistant" if msg["sender"] == "assistant" else "user"
                         messages.append({"role": role, "content": msg["content"]})
