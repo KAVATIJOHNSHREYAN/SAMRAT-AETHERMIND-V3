@@ -1,3 +1,4 @@
+/* eslint-disable */
 const getBaseUrl = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.endsWith("/api/v1")

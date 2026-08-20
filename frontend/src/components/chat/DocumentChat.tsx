@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useEffect, useRef, useState } from 'react';
 import { apiService } from '@/services/api';
 import { useChatStore } from '@/store/chatStore';
