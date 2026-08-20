@@ -1321,7 +1321,7 @@ export default function Home() {
                   <span className="px-4 text-[9px] uppercase tracking-widest font-extrabold text-slate-650 block mb-2">
                     RECENT CONVERSATIONS
                   </span>
-                  
+
                   {chats.filter(c => !hiddenChatIds.includes(c.id)).map((chat) => (
                     <div
                       key={chat.id}
@@ -1339,7 +1339,7 @@ export default function Home() {
                         <MessageSquare className="w-4 h-4 shrink-0 opacity-70" />
                         <span className="text-xs font-semibold truncate">{chat.title || 'New Chat'}</span>
                       </div>
-                      
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1575,8 +1575,8 @@ export default function Home() {
 
     {/* Capsule Container */}
     <div className={`rounded-full border p-3 flex items-center gap-2 shadow-2xl transition-all ${
-      isDark 
-        ? 'border-white/[0.08] bg-[#0b0c16]/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)]' 
+      isDark
+        ? 'border-white/[0.08] bg-[#0b0c16]/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)]'
         : 'border-slate-200 bg-white/80 backdrop-blur-xl shadow-slate-200/60'
     }`}>
       <div className="p-2 flex-shrink-0">
@@ -1657,7 +1657,7 @@ export default function Home() {
           className={`px-4.5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border ${
             activeMode === mode
               ? 'bg-violet-655/20 border-violet-500/30 text-violet-400 shadow-md shadow-violet-500/10'
-              : isDark 
+              : isDark
                 ? 'bg-white/[0.01] border-white/5 text-slate-455 hover:border-white/10 hover:text-white'
                 : 'bg-white border-slate-200 text-slate-600 hover:border-[#38BDF8]/40 hover:text-[#0EA5E9]'
           }`}
@@ -2464,3 +2464,4 @@ export default function Home() {
 
   return chatContent;
 }
+

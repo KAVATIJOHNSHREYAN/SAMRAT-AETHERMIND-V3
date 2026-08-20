@@ -136,17 +136,17 @@ async def chat(
 
     # Generate answer using Multi-Provider Orchestration System (AI Router)
     from app.services.ai_router import ai_router
-    
+
     # Retrieve recent chat history for this document
     history_msgs = db.query(ChatMessage).filter(ChatMessage.pdf_id == pdf.id).order_by(ChatMessage.created_at.desc()).limit(5).all()
     history_msgs.reverse()
     history = [{"sender": "user" if m.role == "user" else "assistant", "content": m.message} for m in history_msgs]
-    
+
     keys = {
         "gemini_key": x_gemini_api_key,
         "openai_key": x_openai_api_key
     }
-    
+
     async def get_router_answer():
         answer_chunks = []
         async for chunk in ai_router.stream_orchestrated_response(
@@ -162,7 +162,7 @@ async def chat(
             if not chunk.startswith("*(System failover"):
                 answer_chunks.append(chunk)
         return "".join(answer_chunks)
-        
+
     import asyncio
     answer = asyncio.run(get_router_answer()) if not asyncio.get_event_loop().is_running() else asyncio.get_event_loop().run_until_complete(get_router_answer())
 
@@ -231,7 +231,7 @@ async def convert_pdf(
         for block in text_content.split("\n\n"):
             if block.strip():
                 markdown_text += f"{block.strip()}\n\n"
-        
+
         buffer = io.BytesIO(markdown_text.encode("utf-8"))
         return StreamingResponse(
             buffer,
@@ -244,15 +244,15 @@ async def convert_pdf(
             import docx
             doc = docx.Document()
             doc.add_heading(base_name, level=0)
-            
+
             for block in text_content.split("\n\n"):
                 if block.strip():
                     doc.add_paragraph(block.strip())
-            
+
             buffer = io.BytesIO()
             doc.save(buffer)
             buffer.seek(0)
-            
+
             return StreamingResponse(
                 buffer,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -260,6 +260,7 @@ async def convert_pdf(
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to generate Word document: {str(e)}")
-            
+
     else:
         raise HTTPException(status_code=400, detail="Invalid conversion format. Supported: markdown, word")
+

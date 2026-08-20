@@ -31,7 +31,7 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
         "phones": [],
         "skills": []
     }
-    
+
     if not text:
         return entities
 
@@ -60,7 +60,7 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
             orgs = set()
             gpes = set()
             dates = set()
-            
+
             for ent in doc.ents:
                 val = ent.text.strip().replace("\n", " ")
                 if len(val) < 2:
@@ -75,7 +75,7 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
                     gpes.add(val)
                 elif ent.label_ == "DATE":
                     dates.add(val)
-            
+
             entities["names"] = list(names)[:5] # Cap top 5 names
             entities["organizations"] = list(orgs)[:10]
             entities["locations"] = list(gpes)[:10]
@@ -93,3 +93,4 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
                 break
 
     return entities
+

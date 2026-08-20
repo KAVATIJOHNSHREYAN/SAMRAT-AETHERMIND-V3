@@ -2,12 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { apiService } from '@/services/api';
 import { useChatStore } from '@/store/chatStore';
-import { 
-  FileText, 
-  Upload, 
-  Trash2, 
-  Send, 
-  Loader2, 
+import {
+  FileText,
+  Upload,
+  Trash2,
+  Send,
+  Loader2,
   Sparkles,
   Bot,
   User,
@@ -55,7 +55,7 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
     if (onSelectedPdfChange) onSelectedPdfChange(pdf);
     else setInternalSelectedPdf(pdf);
   };
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +98,7 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
     try {
       const response = await apiService.uploadDocPdf(token, file, modelSettings);
       await fetchPDFs();
-      
+
       if (response.pdf_id) {
         setSelectedPdf({
           pdf_id: response.pdf_id,
@@ -230,7 +230,7 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
             )}
             <span>Upload PDF</span>
           </button>
-          
+
           {selectedPdf && (
             <button
               onClick={(e) => handleDelete(selectedPdf.pdf_id, e)}
@@ -268,7 +268,7 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mb-6 max-w-sm`}>
                 Upload a document using the top-right button, and query its contents. DocMind AI extracts context blocks and replies using only verified document context.
               </p>
-              
+
               {/* Feature Grid */}
               <div className="grid grid-cols-2 gap-3 w-full text-left">
                 <div className={`p-3.5 border ${isDark ? 'bg-[#0a0a0a] border-slate-900' : 'bg-slate-50 border-slate-150'} rounded-2xl`}>
@@ -302,7 +302,7 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
               <div className="text-3xl mb-2">💬</div>
               <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-800'} mb-1`}>No Chat History</h3>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mb-6`}>Ask a question or select one of the templates below:</p>
-              
+
               <div className="grid gap-2.5 w-full">
                 {suggestions.map((s, idx) => (
                   <button
@@ -429,3 +429,4 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
     </div>
   );
 }
+

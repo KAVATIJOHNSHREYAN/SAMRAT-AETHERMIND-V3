@@ -38,10 +38,10 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
           const scaleFactor = Math.min(maxWidth / img.width, 1);
           canvas.width = img.width * scaleFactor;
           canvas.height = img.height * scaleFactor;
-          
+
           // Draw base image
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
+
           // Initialize mask canvas to transparent black
           ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         };
@@ -115,31 +115,31 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
 
   const generateMaskBase64 = () => {
     if (!canvasRef.current || !image) return;
-    
+
     // We create a temporary black-and-white mask canvas
     // where black is the unmasked area and white is the painted/masked area
     const tempCanvas = document.createElement('canvas');
     const canvas = canvasRef.current;
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
-    
+
     const tempCtx = tempCanvas.getContext('2d');
     const ctx = canvas.getContext('2d');
-    
+
     if (tempCtx && ctx) {
       // Get current screen canvas pixel data
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
-      
+
       const maskImgData = tempCtx.createImageData(canvas.width, canvas.height);
       const maskData = maskImgData.data;
-      
+
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i+1];
         const b = data[i+2];
         const a = data[i+3];
-        
+
         // If the pixel is significantly tinted with our red brush color (255, 0, 0)
         if (r > 200 && g < 50 && b < 50 && a > 100) {
           // White = Masked area
@@ -155,7 +155,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
           maskData[i+3] = 255;
         }
       }
-      
+
       tempCtx.putImageData(maskImgData, 0, 0);
       setMask(tempCanvas.toDataURL('image/png'));
     }
@@ -222,7 +222,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* Left Column: Tool Selector & Parameters (Lg: 4 cols) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
@@ -367,7 +367,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
         {/* Right Column: Source View & Result Panel (Lg: 8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
             {/* Input File Box */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3 min-h-[380px]">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
@@ -512,3 +512,4 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     </div>
   );
 }
+

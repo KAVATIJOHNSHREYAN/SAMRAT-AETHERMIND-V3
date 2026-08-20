@@ -40,17 +40,17 @@ def run_replicate_prediction(version_id: str, inputs: dict, api_key: str) -> str
         "version": version_id,
         "input": inputs
     }
-    
+
     logger.info(f"Triggering Replicate model version: {version_id}")
     res = requests.post(url, json=data, headers=headers, timeout=15)
     if res.status_code != 201:
         error_msg = res.json().get("detail", res.text)
         raise HTTPException(status_code=500, detail=f"Replicate API initialization failed: {error_msg}")
-        
+
     prediction = res.json()
     prediction_id = prediction["id"]
     poll_url = f"https://api.replicate.com/v1/predictions/{prediction_id}"
-    
+
     # Poll for up to 60 seconds
     for _ in range(30):
         poll_res = requests.get(poll_url, headers=headers, timeout=5)
@@ -66,34 +66,34 @@ def run_replicate_prediction(version_id: str, inputs: dict, api_key: str) -> str
                 error_detail = result.get("error", "Unknown prediction failure")
                 raise HTTPException(status_code=500, detail=f"Replicate prediction {status}: {error_detail}")
         time.sleep(2)
-        
+
     raise HTTPException(status_code=504, detail="Replicate prediction timed out")
 
 @router.post("/process")
 def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(get_current_user)):
     effective_key = payload.replicate_key or os.getenv("REPLICATE_API_KEY")
-    
+
     # Clean up base64 image strings
     clean_image = ensure_data_uri(payload.image)
     clean_mask = ensure_data_uri(payload.mask) if payload.mask else None
-    
+
     # 1. REMOVE BACKGROUND
     if payload.tool == "remove_bg":
         if not effective_key:
             # Fallback mock: Return a public transparent background image representation
             return {"output_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=600", "message": "Keyless Simulation Mode: Returning sample portrait."}
-        
+
         # lucataco/remove-bg
         version = "95a68c0b5f121e428416ca23cb6e174c86b2450ad5c0a373977efebaa8fbf3ef"
         res_url = run_replicate_prediction(version, {"image": clean_image}, effective_key)
         return {"output_url": res_url}
-        
+
     # 2. REPLACE BACKGROUND
     elif payload.tool == "replace_bg":
         if not effective_key:
             # Fallback mock: Return a scenic background fallback
             return {"output_url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800", "message": "Keyless Simulation Mode: Returning landscape background replace."}
-            
+
         # replace background using replicate model
         # lucataco/background-removal-and-replacement or similar
         version = "8e95089e909569ed9ccde645479cb2566ec48fc4d1b827e8d08cb5f69be8489e"
@@ -103,15 +103,15 @@ def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(g
         }
         res_url = run_replicate_prediction(version, inputs, effective_key)
         return {"output_url": res_url}
-        
+
     # 3. INPAINTING
     elif payload.tool == "inpaint":
         if not effective_key:
             return {"output_url": clean_image, "message": "Keyless Simulation Mode: Inpaint requires Replicate Key."}
-            
+
         if not clean_mask:
             raise HTTPException(status_code=400, detail="Mask image is required for inpainting")
-            
+
         # stability-ai/sdxl-inpainting
         version = "50c2a74cbeac37482329b533e4f3a763806f1eb1752b0cd26f634585ec8fc9c4"
         inputs = {
@@ -122,12 +122,12 @@ def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(g
         }
         res_url = run_replicate_prediction(version, inputs, effective_key)
         return {"output_url": res_url}
-        
+
     # 4. OUTPAINTING
     elif payload.tool == "outpaint":
         if not effective_key:
             return {"output_url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=1000", "message": "Keyless Simulation Mode: Returning expanded shoreline sample."}
-            
+
         # stability-ai/sdxl
         version = "7762fd07cf8d330c50b69a924449d657b98a32347b59496bfa2010839e2467d0"
         inputs = {
@@ -138,12 +138,12 @@ def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(g
         }
         res_url = run_replicate_prediction(version, inputs, effective_key)
         return {"output_url": res_url}
-        
+
     # 5. UPSCALE
     elif payload.tool == "upscale":
         if not effective_key:
             return {"output_url": clean_image, "message": "Keyless Simulation Mode: Upscale simulation complete."}
-            
+
         # nightmareai/real-esrgan
         version = "42fed1c4974175853dcd5b11c297d31fe0e7b4122c9e782620584b4cf959cfcf"
         inputs = {
@@ -153,12 +153,12 @@ def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(g
         }
         res_url = run_replicate_prediction(version, inputs, effective_key)
         return {"output_url": res_url}
-        
+
     # 6. FACE ENHANCEMENT
     elif payload.tool == "face_enhance":
         if not effective_key:
             return {"output_url": clean_image, "message": "Keyless Simulation Mode: Face enhancement complete."}
-            
+
         # tencentarc/gfpgan
         version = "928360859063d2b77af57b2822a165b4d4b5d23d73c2ff406b03757786f952f4"
         inputs = {
@@ -168,6 +168,7 @@ def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(g
         }
         res_url = run_replicate_prediction(version, inputs, effective_key)
         return {"output_url": res_url}
-        
+
     else:
         raise HTTPException(status_code=400, detail="Invalid tool parameter selected")
+

@@ -24,10 +24,10 @@ def async_generate_video_task(prompt: str, replicate_key: str = None) -> str:
     and upload it permanently to Cloudinary.
     """
     print(f"Starting async video generation for prompt: '{prompt}'")
-    
+
     # 1. Call standard Replicate pipeline
     temp_video_url = generate_video(prompt, replicate_key)
-    
+
     # 2. If it is a real URL and not a warning/fallback placeholder, persist in Cloudinary
     if temp_video_url and temp_video_url.startswith("http") and "mixkit.co" not in temp_video_url:
         try:
@@ -44,6 +44,7 @@ def async_generate_video_task(prompt: str, replicate_key: str = None) -> str:
                 return permanent_url
         except Exception as e:
             print(f"Error persisting generated video to Cloudinary: {e}")
-            
+
     # Fallback to the temp url or placeholder
     return temp_video_url
+

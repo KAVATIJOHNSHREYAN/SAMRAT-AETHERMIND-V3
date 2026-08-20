@@ -339,3 +339,4 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   }),
   removeToast: (id) => set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) })),
 }));
+

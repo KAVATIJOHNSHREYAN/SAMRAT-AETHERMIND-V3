@@ -47,7 +47,7 @@ export const VortexVisualizer: React.FC<VortexVisualizerProps> = ({ isListening,
         this.radius = this.baseRadius;
         this.speed = 0.01 + Math.random() * 0.015;
         this.size = 1 + Math.random() * 1.8;
-        
+
         // Dynamic colors: neon pinks, purples, cyans
         const colors = [
           'rgba(236, 72, 153, 0.75)', // pink
@@ -61,7 +61,7 @@ export const VortexVisualizer: React.FC<VortexVisualizerProps> = ({ isListening,
       update(time: number, multiplier: number) {
         // Spiral motion around the center
         this.angle += this.speed * multiplier;
-        
+
         // Wave modulation
         const wave = Math.sin(this.angle * 3 + time * 0.005) * 12 * multiplier;
         this.radius = this.baseRadius + wave;
@@ -74,11 +74,11 @@ export const VortexVisualizer: React.FC<VortexVisualizerProps> = ({ isListening,
         c.beginPath();
         c.arc(x, y, this.size, 0, Math.PI * 2);
         c.fillStyle = this.color;
-        
+
         // Add subtle neon shadows
         c.shadowColor = this.color;
         c.shadowBlur = 8;
-        
+
         c.fill();
         c.shadowBlur = 0; // reset
       }
@@ -141,3 +141,4 @@ export const VortexVisualizer: React.FC<VortexVisualizerProps> = ({ isListening,
     </div>
   );
 };
+

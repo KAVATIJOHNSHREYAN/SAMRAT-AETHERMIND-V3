@@ -32,14 +32,14 @@ def upload_to_cloudinary(file_bytes: bytes, folder: str, file_name: str = None) 
             return response.get("secure_url")
         except Exception as e:
             print(f"Cloudinary upload failed: {e}. Falling back to local storage.")
-    
+
     # Local fallback
     if os.getenv("VERCEL"):
         uploads_dir = "/tmp/uploads"
     else:
         uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
-    
+
     # Try to guess extension based on folder
     ext = ""
     if folder == "images":
@@ -50,13 +50,14 @@ def upload_to_cloudinary(file_bytes: bytes, folder: str, file_name: str = None) 
         ext = ".mp3"
     elif folder == "documents":
         ext = ".pdf"
-        
+
     local_filename = f"{file_name}{ext}"
     local_path = os.path.join(uploads_dir, local_filename)
-    
+
     with open(local_path, "wb") as f:
         f.write(file_bytes)
-        
+
     # In production/local, the backend will expose static folder /uploads/
     # Return path relative to the server host
     return f"/uploads/{local_filename}"
+

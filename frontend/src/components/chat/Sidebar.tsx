@@ -29,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, onSelectChat, onLog
             <span className="text-xs text-slate-500 font-medium">Enterprise AI Engine</span>
           </div>
         </div>
-        
+
         <button
           onClick={toggleTheme}
           className="p-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, onSelectChat, onLog
         <div className="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
           Recent Dialogues
         </div>
-        
+
         {chats.length === 0 ? (
           <div className="text-center py-8 text-sm text-slate-500">
             No active conversations
@@ -108,3 +108,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, onSelectChat, onLog
     </aside>
   );
 };
+

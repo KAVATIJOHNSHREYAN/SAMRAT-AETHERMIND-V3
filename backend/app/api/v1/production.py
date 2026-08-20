@@ -98,14 +98,14 @@ def run_sync_video_generation(task_id: str, prompt: str, replicate_key: str = No
     try:
         from app.services.media_pipeline import generate_video
         temp_video_url = generate_video(prompt, replicate_key)
-        
+
         # Persist to Cloudinary if real
         final_url = temp_video_url
         if temp_video_url and temp_video_url.startswith("http") and "mixkit.co" not in temp_video_url:
             response = requests.get(temp_video_url, timeout=30)
             if response.status_code == 200:
                 final_url = upload_to_cloudinary(response.content, "videos")
-                
+
         bg_tasks_db[task_id] = {"status": "SUCCESS", "result": final_url}
     except Exception as e:
         bg_tasks_db[task_id] = {"status": "FAILURE", "result": str(e)}
@@ -128,7 +128,7 @@ def chat_endpoint(
     Supports inline `/image` and `/video` generations.
     """
     user_id = current_user.id if current_user else None
-    
+
     # Save User message in DB if authenticated and chat_id is provided
     if current_user and payload.chat_id:
         chat = db.query(Chat).filter(Chat.id == payload.chat_id, Chat.user_id == current_user.id).first()
@@ -148,16 +148,16 @@ def chat_endpoint(
     content_lower = payload.content.lower().strip()
     is_image_request = content_lower.startswith("/image") or any(phrase in content_lower for phrase in ["generate image", "generate a picture", "draw a", "make a picture"])
     is_video_request = content_lower.startswith("/video") or any(phrase in content_lower for phrase in ["generate video", "make a video", "generate an animation", "animate "])
-    
+
     has_image_attachment = payload.attachments and len(payload.attachments) > 0 and any(a.type.startswith("image/") for a in payload.attachments)
 
     if is_image_request:
         prompt_text = payload.content.replace("/image", "").strip()
-        
+
         async def image_stream_generator():
             yield f"data: {json.dumps({'chunk': '🎨 Initializing AetherMind Image Generation Engine...\n'})}\n\n"
             await asyncio.sleep(0.4)
-            
+
             if has_image_attachment:
                 yield f"data: {json.dumps({'chunk': '👤 Processing face references for consistency...\n'})}\n\n"
                 await asyncio.sleep(0.4)
@@ -167,7 +167,7 @@ def chat_endpoint(
                 yield f"data: {json.dumps({'chunk': '⚡ Fetching high-quality visual outputs...\n'})}\n\n"
                 await asyncio.sleep(0.4)
                 img_url = await asyncio.to_thread(generate_image, prompt_text or "cyberpunk portrait", x_openai_api_key)
-                
+
             # Upload to Cloudinary for production persistence
             try:
                 response = requests.get(img_url, timeout=20)
@@ -175,9 +175,9 @@ def chat_endpoint(
                     img_url = upload_to_cloudinary(response.content, "images")
             except Exception as e:
                 print(f"Cloudinary upload fallback exception: {e}")
-                
+
             markdown_content = f"\n\n![Generated Image]({img_url})\n"
-            
+
             # Save complete reply to DB if stateful
             if current_user and payload.chat_id:
                 from app.db.postgres import SessionLocal
@@ -189,22 +189,22 @@ def chat_endpoint(
                     )
                     db_session.add(bot_msg)
                     db_session.commit()
-                    
+
             yield f"data: {json.dumps({'chunk': markdown_content})}\n\n"
-            
+
         return StreamingResponse(image_stream_generator(), media_type="text/event-stream")
 
     elif is_video_request:
         prompt_text = payload.content.replace("/video", "").strip()
         rep_key = x_replicate_api_key or os.getenv("REPLICATE_API_KEY")
-        
+
         async def video_stream_generator():
             yield f"data: {json.dumps({'chunk': '🎥 Initializing AetherMind Video Generation Engine...\n'})}\n\n"
             await asyncio.sleep(0.4)
-            
+
             task_id = f"bg_{uuid.uuid4().hex}"
             queue = "background_tasks"
-            
+
             if celery_available:
                 try:
                     task = async_generate_video_task.delay(prompt_text or "cyberpunk city", rep_key)
@@ -212,13 +212,13 @@ def chat_endpoint(
                     queue = "celery"
                 except Exception as e:
                     print(f"Celery queue error: {e}. Falling back to BackgroundTasks.")
-            
+
             if queue == "background_tasks":
                 bg_tasks_db[task_id] = {"status": "PENDING", "result": None}
                 background_tasks.add_task(run_sync_video_generation, task_id, prompt_text or "cyberpunk city", rep_key)
-                
+
             yield f"data: {json.dumps({'chunk': f'🎥 Video enqueued successfully. (Task ID: {task_id})\nRendering frames...\n', 'task_id': task_id, 'status': 'PENDING'})}\n\n"
-            
+
         return StreamingResponse(video_stream_generator(), media_type="text/event-stream")
 
     # Construct history structure for standard text chatbot
@@ -229,7 +229,7 @@ def chat_endpoint(
     async def response_generator():
         assistant_content = ""
         attachments_list = [{"type": a.type, "data": a.data} for a in payload.attachments] if payload.attachments else None
-        
+
         # Load user_id context to restrict FAISS search multi-tenancy
         async for chunk in generate_response_stream(
             query=payload.content,
@@ -248,7 +248,7 @@ def chat_endpoint(
         ):
             assistant_content += chunk
             yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-            
+
         # Save complete reply to DB if authenticated and chat_id is provided
         if current_user and payload.chat_id:
             from app.db.postgres import SessionLocal
@@ -279,17 +279,17 @@ async def voice_transcribe(
     if not api_key:
         # Fallback simulated transcription for sandbox/developer setups
         return {"text": "Aether voice command received. Please configure an OpenAI API key in the settings tab to enable Whisper."}
-        
+
     content = await file.read()
     ext = os.path.splitext(file.filename or "audio.webm")[1]
     if not ext:
         ext = ".webm"
-        
+
     import tempfile
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
-        
+
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
@@ -372,7 +372,7 @@ async def generate_image_route(
     Persists final image to Cloudinary storage.
     """
     prompt = payload.prompt
-    
+
     # 1. Try Stability AI
     stab_key = stability_api_key or os.getenv("STABILITY_API_KEY")
     if stab_key:
@@ -403,7 +403,7 @@ async def generate_image_route(
 
     # 2. Try DALL-E / Pollinations standard service
     img_url = generate_image(prompt, x_openai_api_key)
-    
+
     # 3. Store in Cloudinary for permanence if generated via Pollinations/DALL-E
     try:
         response = requests.get(img_url, timeout=20)
@@ -412,7 +412,7 @@ async def generate_image_route(
             return {"url": permanent_url}
     except Exception as e:
         print(f"Failed uploading generated image to Cloudinary: {e}")
-        
+
     return {"url": img_url}
 
 @router.post("/generate/video")
@@ -428,7 +428,7 @@ def generate_video_route(
     """
     rep_key = x_replicate_api_key or os.getenv("REPLICATE_API_KEY")
     prompt = payload.prompt
-    
+
     if celery_available and celery_app.broker_connection():
         try:
             # Enqueue celery task
@@ -436,7 +436,7 @@ def generate_video_route(
             return {"task_id": task.id, "status": "PENDING", "queue": "celery"}
         except Exception as e:
             print(f"Failed enqueuing Celery task: {e}. Falling back to BackgroundTasks.")
-            
+
     # Fallback to local BackgroundTasks
     task_id = f"bg_{uuid.uuid4().hex}"
     bg_tasks_db[task_id] = {"status": "PENDING", "result": None}
@@ -454,23 +454,23 @@ def get_task_status(task_id: str):
         if not task_info:
             raise HTTPException(status_code=404, detail="Task not found")
         return task_info
-        
+
     if not celery_available:
         raise HTTPException(status_code=400, detail="Celery backend is disabled")
-        
+
     from celery.result import AsyncResult
     task_result = AsyncResult(task_id, app=celery_app)
-    
+
     response = {
         "status": task_result.state,
         "result": None
     }
-    
+
     if task_result.state == "SUCCESS":
         response["result"] = task_result.result
     elif task_result.state == "FAILURE":
         response["result"] = str(task_result.result)
-        
+
     return response
 
 @router.post("/upload/document")
@@ -485,7 +485,7 @@ async def upload_document_production(
     ext = os.path.splitext(filename)[1].lower()
     if ext not in [".pdf", ".txt"]:
         raise HTTPException(status_code=400, detail="Accepts PDF or TXT only.")
-        
+
     raw_text = ""
     try:
         if ext == ".pdf":
@@ -499,23 +499,23 @@ async def upload_document_production(
             raw_text = content.decode("utf-8")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed parsing file: {e}")
-        
+
     if not raw_text.strip():
         raise HTTPException(status_code=400, detail="Document text content is empty.")
-        
+
     # Standard chunking
     from app.api.v1.upload import chunk_text
     chunks = chunk_text(raw_text)
-    
+
     # Construct metadata (store user_id for tenant filtering if logged in)
     u_id = current_user.id if current_user else "guest"
     metadatas = [{"filename": filename, "user_id": u_id} for _ in chunks]
-    
+
     try:
         add_documents_to_vector_store(chunks, metadatas)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FAISS indexing failed: {e}")
-        
+
     return {
         "status": "SUCCESS",
         "filename": filename,
@@ -545,7 +545,7 @@ async def resume_analyze_endpoint(
     ext = os.path.splitext(filename)[1].lower()
     if ext not in [".pdf", ".txt"]:
         raise HTTPException(status_code=400, detail="Accepts PDF or TXT resume files only.")
-        
+
     # Read text
     text_content = ""
     if ext == ".pdf":
@@ -557,17 +557,17 @@ async def resume_analyze_endpoint(
     else:
         content = await file.read()
         text_content = content.decode("utf-8")
-        
+
     if not text_content.strip():
         raise HTTPException(status_code=400, detail="Empty resume file.")
-        
+
     # 1. Run spaCy NER Information Extraction
     extracted_info = extract_entities(text_content)
-    
+
     # 2. Score and analyze against Job Description using LLM if keys available
     analysis_report = "Please configure an OpenAI or Gemini API Key to perform full resume-to-job analysis."
     score = 50 # Fallback baseline score
-    
+
     api_key = x_openai_api_key or x_gemini_api_key or os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
     if api_key and job_description:
         prompt = (
@@ -577,7 +577,7 @@ async def resume_analyze_endpoint(
             f"Provide a structured analysis. First output a score between 0 and 100 on a line matching: 'SCORE: <value>'. "
             f"Then write a summary detailing key strengths, matching technologies, missing skills, and recommended improvements."
         )
-        
+
         try:
             # We run a synchronous generator request helper to retrieve complete answer
             reply = ""
@@ -592,7 +592,7 @@ async def resume_analyze_endpoint(
                 enable_rag=False
             ):
                 reply += chunk
-                
+
             analysis_report = reply
             # Extract score
             score_match = re.search(r'SCORE:\s*(\d+)', reply, re.IGNORECASE)
@@ -600,14 +600,15 @@ async def resume_analyze_endpoint(
                 score = int(score_match.group(1))
         except Exception as e:
             analysis_report = f"LLM Match Evaluation failed: {e}"
-            
+
     elif not job_description:
         analysis_report = "Resume successfully parsed. Provide a target Job Description to activate matching analysis."
         score = 100 if len(extracted_info["skills"]) > 5 else 70
-        
+
     return {
         "filename": filename,
         "entities": extracted_info,
         "match_score": score,
         "analysis": analysis_report
     }
+

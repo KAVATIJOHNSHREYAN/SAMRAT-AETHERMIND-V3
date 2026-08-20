@@ -5,7 +5,7 @@ from app.db.postgres import Base
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(String(255), primary_key=True, index=True) # supports Clerk ID formats e.g. user_...
     email = Column(String(255), unique=True, index=True, nullable=False)
     first_name = Column(String(100), nullable=True)
@@ -25,7 +25,7 @@ class User(Base):
 
 class Chat(Base):
     __tablename__ = "chats"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(255), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), default="New Chat")
@@ -39,7 +39,7 @@ class Chat(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     chat_id = Column(String(36), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
     sender = Column(String(50), nullable=False) # user, assistant, system

@@ -13,7 +13,7 @@ def extract_text_from_file(file_bytes: bytes, mime_type: str) -> str:
     import io
     text = ""
     mime_type_lower = mime_type.lower()
-    
+
     if "pdf" in mime_type_lower:
         try:
             import pypdf
@@ -127,7 +127,7 @@ async def generate_response_stream(
 
     # Redirection to the Multi-Provider Orchestration System (AI Router)
     from app.services.ai_router import ai_router
-    
+
     keys = {
         "gemini_key": gemini_key,
         "openai_key": openai_key,
@@ -135,7 +135,7 @@ async def generate_response_stream(
         "anthropic_key": anthropic_key,
         "deepseek_key": deepseek_key
     }
-    
+
     async for chunk in ai_router.stream_orchestrated_response(
         query=query,
         chat_history=chat_history,
@@ -147,3 +147,4 @@ async def generate_response_stream(
     ):
         yield chunk
     return
+

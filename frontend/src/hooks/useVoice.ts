@@ -34,9 +34,9 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
-  
+
   const { languageSettings, voiceSettings } = useChatStore();
-  
+
   const recognitionRef = useRef<any>(null);
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
 
@@ -59,7 +59,7 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        
+
         // Use configured text language for recognition
         recognition.lang = langToCode[languageSettings.textLanguage] || 'en-US';
 
@@ -81,7 +81,7 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
         recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
-          
+
           // Ignore normal user stop/abort actions
           if (event.error === 'aborted') {
             return;
@@ -103,7 +103,7 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
         recognitionRef.current = recognition;
         setTimeout(() => setSpeechSupported(true), 0);
       }
-      
+
       synthesisRef.current = window.speechSynthesis;
     }
   }, []); // Run only on mount
@@ -159,47 +159,47 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
 
   const speak = (text: string) => {
     if (!synthesisRef.current) return;
-    
+
     // Stop active speech recognition first
     stopListening();
-    
+
     // Cancel ongoing speech
     synthesisRef.current.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    
+
     // Apply pitch and speed
     utterance.pitch = voiceSettings.pitch || 1;
     utterance.rate = voiceSettings.speed || 1;
-    
+
     const voices = synthesisRef.current.getVoices();
     let targetLang = langToCode[languageSettings.voiceLanguage] || 'en-US';
-    
+
     // Apply accent for English
     if (languageSettings.voiceLanguage === 'English' && voiceSettings.accent) {
       targetLang = accentToCode[voiceSettings.accent] || 'en-US';
     }
-    
+
     const langVoices = voices.filter(v => v.lang.startsWith(targetLang.split('-')[0]));
-    
+
     let chosenVoice;
-    
+
     // Personality heuristic filtering
     const isMale = voiceSettings.personality === 'Male';
     const isFemale = voiceSettings.personality === 'Female' || voiceSettings.personality === 'Friendly';
-    
+
     if (isMale) {
       chosenVoice = langVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('guy'));
     } else if (isFemale) {
       const femaleVoiceNames = ['jenny', 'aria', 'samantha', 'zira', 'female', 'tessa', 'susan', 'karen'];
       chosenVoice = langVoices.find(v => femaleVoiceNames.some(f => v.name.toLowerCase().includes(f)));
     }
-    
+
     if (!chosenVoice && langVoices.length > 0) {
       // Prioritize Google / Natural voices if available
       chosenVoice = langVoices.find(v => v.name.includes('Natural') || v.name.includes('Google')) || langVoices[0];
     }
-    
+
     if (!chosenVoice) {
       chosenVoice = voices[0];
     }
@@ -217,7 +217,7 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
       if (onResponseEndRef.current) {
         onResponseEndRef.current();
       }
-      
+
       // Auto-restart listening if continuous mode is enabled
       if (voiceSettings.continuousMode && speechSupported && recognitionRef.current) {
         setTimeout(() => {
@@ -252,3 +252,4 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
     stopSpeaking
   };
 };
+

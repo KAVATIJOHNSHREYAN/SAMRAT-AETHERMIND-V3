@@ -71,9 +71,9 @@ def generate_video(prompt: str, replicate_key: str = None) -> str:
             prediction = res.json()
             prediction_id = prediction["id"]
             poll_url = f"https://api.replicate.com/v1/predictions/{prediction_id}"
-            
+
             logger.info(f"Started video generation with prediction ID: {prediction_id}")
-            
+
             # Poll up to 60 seconds
             for _ in range(30):
                 poll_res = requests.get(poll_url, headers=headers, timeout=5)
@@ -92,7 +92,7 @@ def generate_video(prompt: str, replicate_key: str = None) -> str:
                 time.sleep(2)
     except Exception as e:
         logger.error(f"Replicate video API failure: {e}")
-    
+
     logger.warning("Video generation failed, using fallback video URL")
     return "https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-background-1611-large.mp4"
 
@@ -104,7 +104,7 @@ def swap_faces(source_image_base64: str, target_image_prompt: str, replicate_key
     # 1. Generate target image scene
     # We use Pollinations to create the scene prompt
     scene_url = generate_image(target_image_prompt)
-    
+
     effective_replicate_key = replicate_key or settings.REPLICATE_API_KEY or None
     if not effective_replicate_key:
         # If no key, we cannot run faceswap. Return the base scene image as a fallback
@@ -121,11 +121,11 @@ def swap_faces(source_image_base64: str, target_image_prompt: str, replicate_key
             "Authorization": f"Token {effective_replicate_key}",
             "Content-Type": "application/json"
         }
-        
+
         # Ensure correct base64 data URI format
         if not source_image_base64.startswith("data:"):
             source_image_base64 = f"data:image/jpeg;base64,{source_image_base64}"
-            
+
         data = {
             "version": version_id,
             "input": {
@@ -138,9 +138,9 @@ def swap_faces(source_image_base64: str, target_image_prompt: str, replicate_key
             prediction = res.json()
             prediction_id = prediction["id"]
             poll_url = f"https://api.replicate.com/v1/predictions/{prediction_id}"
-            
+
             logger.info(f"Started face swap with prediction ID: {prediction_id}")
-            
+
             for _ in range(30):
                 poll_res = requests.get(poll_url, headers=headers, timeout=5)
                 if poll_res.status_code == 200:
@@ -155,7 +155,7 @@ def swap_faces(source_image_base64: str, target_image_prompt: str, replicate_key
                 time.sleep(2)
     except Exception as e:
         logger.error(f"Replicate face swap error: {e}")
-        
+
     return scene_url
 
 

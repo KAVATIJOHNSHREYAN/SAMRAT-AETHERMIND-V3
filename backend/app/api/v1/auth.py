@@ -83,7 +83,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             detail="Invalid token or expired session",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(
@@ -101,7 +101,7 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
             status_code=400,
             detail="Email already registered"
         )
-    
+
     new_user_id = f"usr_{uuid_generator()}"
     new_user = User(
         id=new_user_id,
@@ -114,7 +114,7 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     access_token = create_access_token(data={"sub": new_user.id})
     return {
         "access_token": access_token,
@@ -130,7 +130,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             status_code=401,
             detail="Incorrect email or password"
         )
-    
+
     access_token = create_access_token(data={"sub": user.id})
     return {
         "access_token": access_token,
@@ -147,19 +147,19 @@ class GoogleLoginRequest(BaseModel):
 def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
     # Check if user already exists
     user = db.query(User).filter(User.email == payload.email).first()
-    
+
     if not user:
         # Create user profile implicitly
         user_id = f"usr_{uuid_generator()}"
         first_name = None
         last_name = None
-        
+
         if payload.name:
             parts = payload.name.split(" ", 1)
             first_name = parts[0]
             if len(parts) > 1:
                 last_name = parts[1]
-                
+
         user = User(
             id=user_id,
             email=payload.email,
@@ -171,7 +171,7 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     access_token = create_access_token(data={"sub": user.id})
     return {
         "access_token": access_token,
@@ -185,14 +185,14 @@ class BiometricLoginRequest(BaseModel):
 @router.post("/biometric", response_model=TokenResponse)
 def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db)):
     email = f"fingerprint_user@samrat.ai" if payload.mode == 'fingerprint' else f"faceid_user@samrat.ai"
-    
+
     # Check if user already exists
     user = db.query(User).filter(User.email == email).first()
-    
+
     if not user:
         # Create user profile implicitly
         user_id = f"usr_{uuid_generator()}"
-        
+
         user = User(
             id=user_id,
             email=email,
@@ -203,7 +203,7 @@ def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     access_token = create_access_token(data={"sub": user.id})
     return {
         "access_token": access_token,
@@ -217,14 +217,14 @@ class BiometricLoginRequest(BaseModel):
 @router.post("/biometric", response_model=TokenResponse)
 def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db)):
     email = f"fingerprint_user@samrat.ai" if payload.mode == 'fingerprint' else f"faceid_user@samrat.ai"
-    
+
     # Check if user already exists
     user = db.query(User).filter(User.email == email).first()
-    
+
     if not user:
         # Create user profile implicitly
         user_id = f"usr_{uuid_generator()}"
-        
+
         user = User(
             id=user_id,
             email=email,
@@ -235,7 +235,7 @@ def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     access_token = create_access_token(data={"sub": user.id})
     return {
         "access_token": access_token,
@@ -260,3 +260,4 @@ def read_current_user(current_user: User = Depends(get_current_user)):
 def uuid_generator() -> str:
     import uuid
     return str(uuid.uuid4()).replace("-", "")[:12]
+

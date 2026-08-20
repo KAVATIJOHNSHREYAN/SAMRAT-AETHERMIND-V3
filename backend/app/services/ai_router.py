@@ -37,7 +37,7 @@ def log_router_event(provider: str, model: str, latency: float, token_count: int
         }
         with open(AI_ROUTER_LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
-            
+
         # Update in-memory stats
         perf = _performance_registry.setdefault(provider, ProviderPerformance())
         perf.total_calls += 1
@@ -70,31 +70,31 @@ class AIRouter:
     def classify_intent(self, query: str, chat_mode: str, attachments: Optional[List[dict]]) -> str:
         """Classifies request characteristics to match the best capability."""
         query_lower = query.lower()
-        
+
         # Check vision/image requirements
         if attachments and any(att.get("type", "").startswith("image/") for att in attachments):
             return "vision"
-            
+
         # Check document/RAG requirements
         if chat_mode == "docChat" or (attachments and any("pdf" in att.get("type", "").lower() or "docx" in att.get("type", "").lower() for att in attachments)):
             return "document"
-            
+
         # Check reasoning/coding requirements
         coding_keywords = ["write a function", "class ", "def ", "compile", "bug", "sql", "regex", "script", "algorithm", "recursive"]
         reasoning_keywords = ["solve", "math", "logical", "prove", "reason", "puzzle", "why is", "calculate"]
-        
+
         if chat_mode in ["coding", "debug"] or any(kw in query_lower for kw in coding_keywords):
             return "coding"
-            
+
         if any(kw in query_lower for kw in reasoning_keywords):
             return "reasoning"
-            
+
         return "general"
 
     def resolve_provider_sequence(self, intent: str, keys: Dict[str, Optional[str]]) -> List[Dict[str, Any]]:
         """Determines ordered fallback list of (provider, model) based on capabilities and active keys."""
         sequence = []
-        
+
         # Define preferred primary models based on classified intent
         intent_preferences = {
             "vision": [
@@ -128,9 +128,9 @@ class AIRouter:
                 {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"}
             ]
         }
-        
+
         candidates = intent_preferences.get(intent, intent_preferences["general"])
-        
+
         # Filter candidates by credential availability
         for item in candidates:
             provider = item["provider"]
@@ -141,7 +141,7 @@ class AIRouter:
                     "model": item["model"],
                     "key": key
                 })
-                
+
         # Append remaining configured providers as safe fallback
         all_providers = ["gemini", "cohere", "openai", "anthropic", "deepseek"]
         for p in all_providers:
@@ -159,7 +159,7 @@ class AIRouter:
                     "model": model,
                     "key": key
                 })
-                
+
         # Smart Memory logic: Sort sequence based on latency/failures if there is telemetry
         def get_score(item):
             perf = _performance_registry.get(item["provider"])
@@ -168,10 +168,10 @@ class AIRouter:
             # Higher error rates push items down, lower average latency pulls them up
             error_weight = perf.total_errors / max(perf.total_calls, 1)
             return error_weight * 1000 + perf.avg_latency
-            
+
         if any(p in _performance_registry for p in all_providers):
             sequence.sort(key=get_score)
-            
+
         return sequence
 
     async def stream_orchestrated_response(
@@ -187,7 +187,7 @@ class AIRouter:
         """Routes stream requests dynamically with seamless retries and multi-provider failover."""
         intent = self.classify_intent(query, chat_mode, attachments)
         sequence = self.resolve_provider_sequence(intent, keys)
-        
+
         if not sequence:
             yield "AetherMind: No AI provider keys are currently configured. Please add an API key in your Settings."
             return
@@ -197,23 +197,23 @@ class AIRouter:
             provider = attempt["provider"]
             model_name = attempt["model"]
             api_key = attempt["key"]
-            
+
             logger.info(f"AIRouter: Attempting orchestration with Provider={provider}, Model={model_name}")
             start_time = time.time()
-            
+
             try:
                 # 1. Google Gemini Provider
                 if provider == "gemini":
                     from google import genai
                     from google.genai import types as genai_types
                     client = genai.Client(api_key=api_key)
-                    
+
                     text_parts = [f"Background/System Context:\n{system_instructions}"]
                     for msg in chat_history[-5:]:
                         sender = "User" if msg["sender"] == "user" else "Assistant"
                         text_parts.append(f"{sender}: {msg['content']}")
                     text_parts.append(f"User Query: {query}")
-                    
+
                     multimodal_parts = []
                     if attachments:
                         import base64
@@ -224,27 +224,27 @@ class AIRouter:
                                 if "," in b64_data:
                                     b64_data = b64_data.split(",")[1]
                                 raw_bytes = base64.b64decode(b64_data)
-                                
+
                                 if att_type.startswith("image/") or att_type.startswith("audio/") or att_type.startswith("video/") or "pdf" in att_type:
                                     multimodal_parts.append(
                                         genai_types.Part.from_bytes(data=raw_bytes, mime_type=att["type"])
                                     )
-                                    
+
                     content_parts = ["\n".join(text_parts)] + multimodal_parts
                     config = genai_types.GenerateContentConfig(temperature=temperature)
-                    
+
                     response = await asyncio.to_thread(
                         client.models.generate_content_stream,
                         model=model_name,
                         contents=content_parts,
                         config=config
                     )
-                    
+
                     # Read stream
                     async for chunk in self._async_generator_wrapper(response):
                         if chunk.text:
                             yield chunk.text
-                            
+
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return # Successfully generated response!
 
@@ -252,26 +252,26 @@ class AIRouter:
                 elif provider == "openai":
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=api_key)
-                    
+
                     messages = [{"role": "system", "content": system_instructions}]
                     for msg in chat_history[-5:]:
                         role = "assistant" if msg["sender"] == "assistant" else "user"
                         messages.append({"role": role, "content": msg["content"]})
                     messages.append({"role": "user", "content": query})
-                    
+
                     response = await client.chat.completions.create(
                         model=model_name,
                         messages=messages,
                         temperature=temperature,
                         stream=True
                     )
-                    
+
                     async for chunk in response:
                         if chunk.choices:
                             text = chunk.choices[0].delta.content
                             if text:
                                 yield text
-                                
+
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return
 
@@ -279,12 +279,12 @@ class AIRouter:
                 elif provider == "cohere":
                     import cohere
                     co = cohere.AsyncClient(api_key=api_key)
-                    
+
                     cohere_history = []
                     for msg in chat_history[-5:]:
                         role = "USER" if msg["sender"] == "user" else "CHATBOT"
                         cohere_history.append({"role": role, "message": msg["content"]})
-                        
+
                     response = co.chat_stream(
                         model=model_name,
                         message=query,
@@ -292,11 +292,11 @@ class AIRouter:
                         chat_history=cohere_history,
                         preamble=system_instructions
                     )
-                    
+
                     async for event in response:
                         if hasattr(event, "text") and event.text:
                             yield event.text
-                            
+
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return
 
@@ -307,13 +307,13 @@ class AIRouter:
                         "anthropic-version": "2023-06-01",
                         "content-type": "application/json"
                     }
-                    
+
                     anthropic_history = []
                     for msg in chat_history[-5:]:
                         role = "assistant" if msg["sender"] == "assistant" else "user"
                         anthropic_history.append({"role": role, "content": msg["content"]})
                     anthropic_history.append({"role": "user", "content": query})
-                    
+
                     payload = {
                         "model": model_name,
                         "messages": anthropic_history,
@@ -322,13 +322,13 @@ class AIRouter:
                         "max_tokens": 4096,
                         "stream": True
                     }
-                    
+
                     async with httpx.AsyncClient() as http_client:
                         async with http_client.stream("POST", "https://api.anthropic.com/v1/messages", json=payload, headers=headers, timeout=30.0) as resp:
                             if resp.status_code != 200:
                                 error_body = await resp.aread()
                                 raise Exception(f"Anthropic error HTTP {resp.status_code}: {error_body.decode('utf-8')}")
-                                
+
                             async for line in resp.aiter_lines():
                                 line = line.strip()
                                 if line.startswith("data:"):
@@ -340,7 +340,7 @@ class AIRouter:
                                                 yield text
                                     except Exception:
                                         pass
-                                        
+
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return
 
@@ -348,26 +348,26 @@ class AIRouter:
                 elif provider == "deepseek":
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
-                    
+
                     messages = [{"role": "system", "content": system_instructions}]
                     for msg in chat_history[-5:]:
                         role = "assistant" if msg["sender"] == "assistant" else "user"
                         messages.append({"role": role, "content": msg["content"]})
                     messages.append({"role": "user", "content": query})
-                    
+
                     response = await client.chat.completions.create(
                         model=model_name,
                         messages=messages,
                         temperature=temperature,
                         stream=True
                     )
-                    
+
                     async for chunk in response:
                         if chunk.choices:
                             text = chunk.choices[0].delta.content
                             if text:
                                 yield text
-                                
+
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return
 
@@ -377,7 +377,7 @@ class AIRouter:
                 log_router_event(provider, model_name, time.time() - start_time, 0, 0.0, error=last_error)
                 # Continue loop to next fallback provider
                 await asyncio.sleep(1.0)
-                
+
         # If all providers fail
         yield f"\n\nAetherMind: All configured AI services failed to respond. (Last Error: {last_error})"
 
@@ -389,3 +389,4 @@ class AIRouter:
 
 # Singleton Instance
 ai_router = AIRouter()
+

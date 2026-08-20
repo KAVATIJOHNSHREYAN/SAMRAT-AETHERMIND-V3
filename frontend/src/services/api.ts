@@ -15,7 +15,7 @@ const getBaseUrl = (): string => {
     ) {
       return "http://localhost:8000/api/v1";
     }
-    
+
     // In production, the backend is hosted under the routePrefix /_/backend
     return `${origin}/_/backend/api/v1`;
   }
@@ -615,3 +615,4 @@ export const apiService = {
     return res.json();
   }
 };
+
