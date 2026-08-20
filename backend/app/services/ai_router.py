@@ -376,7 +376,6 @@ class AIRouter:
                 logger.error(f"AIRouter error on provider={provider}: {last_error}")
                 log_router_event(provider, model_name, time.time() - start_time, 0, 0.0, error=last_error)
                 # Continue loop to next fallback provider
-                yield f"\n*(System failover: routing request to next backup provider...)*\n"
                 await asyncio.sleep(1.0)
                 
         # If all providers fail

@@ -1318,6 +1318,50 @@ export default function Home() {
 
                 <div className="space-y-1">
                   <span className="px-4 text-[9px] uppercase tracking-widest font-extrabold text-slate-650 block mb-2">
+                    RECENT CONVERSATIONS
+                  </span>
+                  
+                  {chats.filter(c => !hiddenChatIds.includes(c.id)).map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`group flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
+                        activeChatId === chat.id
+                          ? (isDark ? 'bg-white/[0.04] text-white' : 'bg-slate-100 text-slate-900')
+                          : (isDark ? 'text-slate-400 hover:text-white hover:bg-white/[0.02]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50')
+                      }`}
+                      onClick={() => {
+                        selectChat(chat.id);
+                        if (window.innerWidth < 768) setSidebarOpen(false);
+                      }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <MessageSquare className="w-4 h-4 shrink-0 opacity-70" />
+                        <span className="text-xs font-semibold truncate">{chat.title || 'New Chat'}</span>
+                      </div>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenuPos({ x: e.clientX, y: e.clientY });
+                          setContextMenuChat(chat);
+                        }}
+                        className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-colors ${
+                          isDark ? 'hover:bg-white/10' : 'hover:bg-slate-200'
+                        }`}
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {chats.filter(c => !hiddenChatIds.includes(c.id)).length === 0 && (
+                    <div className="px-4 text-[10px] text-slate-500 italic py-2">No recent chats</div>
+                  )}
+                </div>
+
+                <div className="h-px bg-white/[0.04] my-4" />
+
+                <div className="space-y-1">
+                  <span className="px-4 text-[9px] uppercase tracking-widest font-extrabold text-slate-650 block mb-2">
                     WORKSPACE
                   </span>
                   {[
@@ -1503,6 +1547,7 @@ export default function Home() {
           </div>
         );
       })}
+      <div ref={messagesEndRef} />
     </div>
                 )}
               </div>
@@ -2232,10 +2277,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Gemini API Key</label>
                         <input
                           type="password"
-                          value={modelSettings.geminiApiKey}
-                          onChange={(e) => setModelSettings({ geminiApiKey: e.target.value })}
+                          value={modelSettings.geminiApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="AIzaSy..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
@@ -2243,10 +2289,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cohere API Key</label>
                         <input
                           type="password"
-                          value={modelSettings.cohereApiKey}
-                          onChange={(e) => setModelSettings({ cohereApiKey: e.target.value })}
+                          value={modelSettings.cohereApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="Zi..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
@@ -2254,10 +2301,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>OpenAI API Key</label>
                         <input
                           type="password"
-                          value={modelSettings.openaiApiKey}
-                          onChange={(e) => setModelSettings({ openaiApiKey: e.target.value })}
+                          value={modelSettings.openaiApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="sk-proj-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
@@ -2265,10 +2313,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Replicate API Key (Image/Video Gen)</label>
                         <input
                           type="password"
-                          value={modelSettings.replicateApiKey}
-                          onChange={(e) => setModelSettings({ replicateApiKey: e.target.value })}
+                          value={modelSettings.replicateApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="r8_..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
@@ -2276,10 +2325,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Anthropic API Key</label>
                         <input
                           type="password"
-                          value={modelSettings.anthropicApiKey}
-                          onChange={(e) => setModelSettings({ anthropicApiKey: e.target.value })}
+                          value={modelSettings.anthropicApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="sk-ant-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
@@ -2287,10 +2337,11 @@ export default function Home() {
                         <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>DeepSeek API Key</label>
                         <input
                           type="password"
-                          value={modelSettings.deepseekApiKey}
-                          onChange={(e) => setModelSettings({ deepseekApiKey: e.target.value })}
+                          value={modelSettings.deepseekApiKey ? "************************" : ""}
+                          readOnly
+                          disabled
                           placeholder="sk-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
                             }`}
                         />
                       </div>
