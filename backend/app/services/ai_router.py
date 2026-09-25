@@ -209,9 +209,12 @@ class AIRouter:
 
     async def stream_built_in_response(self, query: str, system_instructions: str, chat_mode: str) -> AsyncGenerator[str, None]:
         """Built-in intelligent AI assistant kernel when external LLM API keys are pending configuration."""
+        import re
         query_lower = query.lower().strip()
+        words_set = set(re.findall(r'\b\w+\b', query_lower))
+        greeting_words = {"hi", "hello", "hey", "hola", "greetings"}
 
-        if any(g in query_lower for g in ["hi", "hello", "hey", "hola", "greetings", "good morning", "good evening"]):
+        if bool(words_set.intersection(greeting_words)) or any(phrase in query_lower for phrase in ["good morning", "good evening", "good afternoon"]):
             msg = (
                 "Hello! I am **AetherMind**, your advanced AI assistant created by **Mister Samrat**.\n\n"
                 "I am fully online and ready to assist you with your projects, coding, document intelligence, and multi-modal tasks!"

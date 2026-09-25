@@ -154,12 +154,20 @@ def post_message(
 
     # 1. Parse Image and Video Generation Triggers
     content_lower = payload.content.lower().strip()
-    image_triggers = [
-        "create an image", "create image", "create pic", "create a picture",
-        "generate image", "generate a picture", "generate pic", "generate a pic",
-        "draw a", "make a picture", "make a photo", "create a photo", "/image"
-    ]
-    is_image_request = content_lower.startswith("/image") or any(phrase in content_lower for phrase in image_triggers)
+    image_keywords = ["image", "picture", "photo", "pic", "illustration", "mockup", "portrait", "wallpaper", "drawing", "artwork", "rendering", "visual", "logo", "graphic"]
+    image_action_verbs = ["generate", "create", "draw", "make", "paint", "design", "render", "/image"]
+
+    has_image_verb = any(verb in content_lower for verb in image_action_verbs)
+    has_image_noun = any(noun in content_lower for noun in image_keywords)
+
+    is_image_request = content_lower.startswith("/image") or (has_image_verb and has_image_noun) or any(
+        phrase in content_lower for phrase in [
+            "create an image", "create image", "create pic", "create a picture",
+            "generate image", "generate a picture", "generate pic", "generate a pic",
+            "draw a", "make a picture", "make a photo", "create a photo", "/image",
+            "workspace mockup", "glassmorphic mockup", "mockup"
+        ]
+    )
     is_video_request = content_lower.startswith("/video") or any(phrase in content_lower for phrase in ["generate video", "make a video", "generate an animation", "animate "])
 
     has_image_attachment = payload.attachments and len(payload.attachments) > 0 and any(a.type.startswith("image/") for a in payload.attachments)
