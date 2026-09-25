@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
     COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY")
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: str | None = os.getenv("GOOGLE_CLIENT_SECRET")
+
     # CORS Origins (Comma-separated string parsed to list)
     ALLOWED_ORIGINS: list[str] = [
         origin.strip() for origin in os.getenv(
