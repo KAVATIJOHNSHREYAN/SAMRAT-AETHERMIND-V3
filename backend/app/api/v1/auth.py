@@ -243,6 +243,139 @@ def biometric_login(payload: BiometricLoginRequest, db: Session = Depends(get_db
         "user_id": user.id
     }
 
+from app.db.models import User, UserDevice
+
+class BiometricRegisterRequest(BaseModel):
+    credential_id: str
+    public_key: Optional[str] = None
+    device_name: str
+    platform: str
+    browser: str
+
+class BiometricAuthenticateRequest(BaseModel):
+    credential_id: str
+
+class DeviceResponse(BaseModel):
+    id: str
+    device_name: str
+    platform: str
+    browser: str
+    location: str
+    biometrics_enabled: bool
+    created_at: datetime
+    last_login_at: datetime
+
+@router.post("/biometrics/register")
+def register_biometric_device(
+    payload: BiometricRegisterRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if credential already registered
+    existing_device = db.query(UserDevice).filter(UserDevice.credential_id == payload.credential_id).first()
+    if existing_device:
+        existing_device.user_id = current_user.id
+        existing_device.device_name = payload.device_name
+        existing_device.platform = payload.platform
+        existing_device.browser = payload.browser
+        existing_device.biometrics_enabled = True
+        existing_device.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing_device)
+        return {"status": "updated", "device_id": existing_device.id}
+
+    new_device = UserDevice(
+        user_id=current_user.id,
+        credential_id=payload.credential_id,
+        public_key=payload.public_key,
+        device_name=payload.device_name,
+        platform=payload.platform,
+        browser=payload.browser,
+        biometrics_enabled=True
+    )
+    db.add(new_device)
+    db.commit()
+    db.refresh(new_device)
+    return {"status": "registered", "device_id": new_device.id}
+
+@router.post("/biometrics/authenticate", response_model=TokenResponse)
+def authenticate_biometric_device(
+    payload: BiometricAuthenticateRequest,
+    db: Session = Depends(get_db)
+):
+    device = db.query(UserDevice).filter(
+        UserDevice.credential_id == payload.credential_id,
+        UserDevice.biometrics_enabled == True
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=401,
+            detail="Biometric credential not recognized or disabled for this device"
+        )
+
+    # Update last login time
+    device.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+
+    user = db.query(User).filter(User.id == device.user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User account not found")
+
+    access_token = create_access_token(data={"sub": user.id})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id
+    }
+
+@router.get("/devices", response_model=list[DeviceResponse])
+def get_user_devices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    devices = db.query(UserDevice).filter(UserDevice.user_id == current_user.id).all()
+    return [
+        {
+            "id": dev.id,
+            "device_name": dev.device_name,
+            "platform": dev.platform,
+            "browser": dev.browser,
+            "location": dev.location or "Approximate / Local",
+            "biometrics_enabled": dev.biometrics_enabled,
+            "created_at": dev.created_at,
+            "last_login_at": dev.last_login_at or dev.created_at
+        }
+        for dev in devices
+    ]
+
+@router.delete("/devices/{device_id}")
+def delete_user_device(
+    device_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    device = db.query(UserDevice).filter(
+        UserDevice.id == device_id,
+        UserDevice.user_id == current_user.id
+    ).first()
+
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    db.delete(device)
+    db.commit()
+    return {"status": "deleted", "device_id": device_id}
+
+@router.post("/devices/logout-all")
+def logout_all_devices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db.query(UserDevice).filter(UserDevice.user_id == current_user.id).delete()
+    db.commit()
+    return {"status": "all_devices_removed"}
+
 @router.get("/me", response_model=UserProfileResponse)
 def read_current_user(current_user: User = Depends(get_current_user)):
     return {

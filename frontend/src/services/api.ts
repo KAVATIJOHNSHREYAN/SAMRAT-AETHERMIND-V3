@@ -90,6 +90,58 @@ export const apiService = {
     return res.json();
   },
 
+  async registerBiometricDevice(token: string, data: { credential_id: string; device_name: string; platform: string; browser: string; public_key?: string }) {
+    const res = await fetch(`${BASE_URL}/auth/biometrics/register`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to register biometric device' }));
+      throw new Error(err.detail || 'Failed to register biometric device');
+    }
+    return res.json();
+  },
+
+  async authenticateBiometricDevice(credentialId: string) {
+    const res = await fetch(`${BASE_URL}/auth/biometrics/authenticate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential_id: credentialId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Biometric authentication failed' }));
+      throw new Error(err.detail || 'Biometric authentication failed');
+    }
+    return res.json();
+  },
+
+  async getTrustedDevices(token: string) {
+    const res = await fetch(`${BASE_URL}/auth/devices`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to fetch trusted devices');
+    return res.json();
+  },
+
+  async removeDevice(token: string, deviceId: string) {
+    const res = await fetch(`${BASE_URL}/auth/devices/${deviceId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to remove device');
+    return res.json();
+  },
+
+  async logoutAllDevices(token: string) {
+    const res = await fetch(`${BASE_URL}/auth/devices/logout-all`, {
+      method: 'POST',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to revoke device sessions');
+    return res.json();
+  },
+
   async getProfile(token: string) {
     const res = await fetch(`${BASE_URL}/auth/me`, {
       headers: getHeaders(token),

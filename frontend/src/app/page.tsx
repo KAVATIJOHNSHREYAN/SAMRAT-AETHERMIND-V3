@@ -9,6 +9,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
 import { DocumentChat } from '@/components/chat/DocumentChat';
 import ImageEditStudio from '@/components/ImageEditStudio';
+import { SecurityDashboard } from '@/components/SecurityDashboard';
 import { useAuth } from '@/context/AuthContext';
 import {
   MessageSquare,
@@ -313,7 +314,7 @@ export default function Home() {
 
   // Settings modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'model' | 'rag' | 'profile' | 'appearance' | 'language' | 'voice'>('profile');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'model' | 'rag' | 'profile' | 'security' | 'appearance' | 'language' | 'voice'>('profile');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -1773,6 +1774,7 @@ export default function Home() {
                 }`}>
                 {[
                   { id: 'profile', label: 'Account Profile', icon: User },
+                  { id: 'security', label: 'Security & Devices', icon: ShieldCheck },
                   { id: 'appearance', label: 'Display Settings', icon: LayoutGrid },
                   { id: 'language', label: 'Language', icon: Mail },
                   { id: 'voice', label: 'Voice Mode', icon: Mic },
@@ -1797,6 +1799,10 @@ export default function Home() {
               </div>
 
               <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto bg-slate-900/10 scrollbar-thin scrollbar-thumb-slate-900">
+
+                {activeSettingsTab === 'security' && (
+                  <SecurityDashboard token={token} isDark={isDark} />
+                )}
 
                 {activeSettingsTab === 'profile' && (
                   <div className="space-y-6 animate-in fade-in duration-200">

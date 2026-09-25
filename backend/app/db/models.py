@@ -22,6 +22,24 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
+    devices = relationship("UserDevice", back_populates="user", cascade="all, delete-orphan")
+
+class UserDevice(Base):
+    __tablename__ = "user_devices"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(255), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    credential_id = Column(Text, unique=True, index=True, nullable=False)
+    public_key = Column(Text, nullable=True)
+    device_name = Column(String(255), nullable=False) # e.g. "My Windows Laptop", "iPhone 15 Pro"
+    platform = Column(String(50), nullable=False) # Windows, macOS, iOS, Android, Linux
+    browser = Column(String(50), nullable=False) # Chrome, Safari, Edge, Firefox, Brave, Arc
+    location = Column(String(100), default="Approximate / Local")
+    biometrics_enabled = Column(Boolean, default=True)
+    last_login_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="devices")
 
 class Chat(Base):
     __tablename__ = "chats"
