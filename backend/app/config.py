@@ -14,10 +14,22 @@ class Settings(BaseSettings):
     # Cache / Queue broker
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-    # AI Provider Keys
+    # AI Provider Keys & Endpoints
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
-    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+    OPENAI_BASE_URL: str | None = os.getenv("OPENAI_BASE_URL")
+    OPENAI_MODEL: str | None = os.getenv("OPENAI_MODEL")
+    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY"))
+    GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
+    ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY")
+    GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
+    OPENROUTER_API_KEY: str | None = os.getenv("OPENROUTER_API_KEY")
+    MISTRAL_API_KEY: str | None = os.getenv("MISTRAL_API_KEY")
+    TOGETHER_API_KEY: str | None = os.getenv("TOGETHER_API_KEY")
+    DEEPSEEK_API_KEY: str | None = os.getenv("DEEPSEEK_API_KEY")
+    OLLAMA_BASE_URL: str | None = os.getenv("OLLAMA_BASE_URL")
+    CUSTOM_API_URL: str | None = os.getenv("CUSTOM_API_URL")
+    CUSTOM_API_KEY: str | None = os.getenv("CUSTOM_API_KEY")
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")

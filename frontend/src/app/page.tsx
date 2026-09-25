@@ -10,6 +10,7 @@ import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
 import { DocumentChat } from '@/components/chat/DocumentChat';
 import ImageEditStudio from '@/components/ImageEditStudio';
 import { SecurityDashboard } from '@/components/SecurityDashboard';
+import { AIProviderSettings } from '@/components/AIProviderSettings';
 import { useAuth } from '@/context/AuthContext';
 import {
   MessageSquare,
@@ -2220,140 +2221,7 @@ export default function Home() {
 
                 {/* TAB: MODEL SETTINGS */}
                 {activeSettingsTab === 'model' && (
-                  <div className="space-y-4">
-                    <div>
-                      {!appearanceSettings.debugMode ? (
-                        <div>
-                          <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model</label>
-                          <div className={`w-full px-3 py-2.5 border rounded-xl text-xs font-bold ${isDark ? 'bg-slate-900/40 border-slate-850 text-violet-400' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
-                            SAMRAT AI (Auto Orchestrated)
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Active LLM Model (Debug Mode)</label>
-                          <select
-                            value={modelSettings.modelName}
-                            onChange={(e) => setModelSettings({ modelName: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-850 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                              }`}
-                          >
-                            <option value="auto">SAMRAT AI (Auto)</option>
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                            <option value="cohere-command-r">Cohere Command-R</option>
-                            <option value="cohere-command-r-plus">Cohere Command-R+</option>
-                            <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
-                            <option value="gpt-4o">OpenAI GPT-4o</option>
-                          </select>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1.5">
-                        <span>Temperature</span>
-                        <span className="text-violet-400 font-bold font-mono">{modelSettings.temperature}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.0"
-                        max="1.0"
-                        step="0.1"
-                        value={modelSettings.temperature}
-                        onChange={(e) => setModelSettings({ temperature: parseFloat(e.target.value) })}
-                        className="w-full accent-violet-500 cursor-pointer"
-                      />
-                    </div>
-
-                    <div>
-                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>System Instructions Override</label>
-                      <textarea
-                        value={modelSettings.systemPrompt}
-                        onChange={(e) => setModelSettings({ systemPrompt: e.target.value })}
-                        placeholder="e.g. You are a helpful code assistant..."
-                        rows={3}
-                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-250 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                          }`}
-                      />
-                    </div>
-
-                    <div className={`pt-2 border-t space-y-3 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
-                      <h4 className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-550' : 'text-slate-400'}`}>API Credentials (Stored locally)</h4>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Gemini API Key</label>
-                        <input
-                          type="password"
-                          value={modelSettings.geminiApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="AIzaSy..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cohere API Key</label>
-                        <input
-                          type="password"
-                          value={modelSettings.cohereApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="Zi..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>OpenAI API Key</label>
-                        <input
-                          type="password"
-                          value={modelSettings.openaiApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="sk-proj-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Replicate API Key (Image/Video Gen)</label>
-                        <input
-                          type="password"
-                          value={modelSettings.replicateApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="r8_..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Anthropic API Key</label>
-                        <input
-                          type="password"
-                          value={modelSettings.anthropicApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="sk-ant-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>DeepSeek API Key</label>
-                        <input
-                          type="password"
-                          value={modelSettings.deepseekApiKey ? "************************" : ""}
-                          readOnly
-                          disabled
-                          placeholder="sk-..."
-                          className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono opacity-50 cursor-not-allowed ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200 placeholder-slate-700' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-                            }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <AIProviderSettings isDark={isDark} modelSettings={modelSettings} setModelSettings={setModelSettings} />
                 )}
 
                 {/* TAB: RAG SETTINGS */}

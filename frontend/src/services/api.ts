@@ -586,6 +586,18 @@ export const apiService = {
     return res.json();
   },
 
+  async getProviderHealth() {
+    const res = await fetch(`${BASE_URL}/providers`);
+    if (!res.ok) throw new Error('Failed to load provider health status');
+    return res.json();
+  },
+
+  async refreshProviderHealth() {
+    const res = await fetch(`${BASE_URL}/providers/refresh`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to refresh provider health status');
+    return res.json();
+  },
+
   setApiUrl(url: string) {
     // Allow runtime API URL configuration
     if (url.endsWith('/api/v1')) {
