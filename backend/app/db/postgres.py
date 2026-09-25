@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
 db_url = settings.DATABASE_URL
-if (os.getenv("VERCEL") or os.getenv("RENDER")) and db_url.startswith("sqlite"):
+if (os.getenv("VERCEL") or os.getenv("RENDER")) and (not db_url or db_url.startswith("sqlite") or "localhost" in db_url):
     db_url = "sqlite:////tmp/aetherchat.db"
 
 # In-memory SQLite fallback for easy local developer setup without pre-running pg
