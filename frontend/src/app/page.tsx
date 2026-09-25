@@ -1556,7 +1556,16 @@ export default function Home() {
                     : 'bg-gradient-to-r from-violet-600 to-cyan-500 border-transparent text-white font-medium shadow-md shadow-violet-950/20'
                   }`}
               >
-                <div className="w-full">{renderMessageContent(msg.content)}</div>
+                <div className="w-full">
+                  {msg.content ? (
+                    renderMessageContent(msg.content)
+                  ) : (
+                    <div className="flex items-center gap-2 text-violet-400 font-medium py-1 animate-pulse">
+                      <Loader2 className="w-4 h-4 animate-spin text-violet-400 shrink-0" />
+                      <span>Generating response...</span>
+                    </div>
+                  )}
+                </div>
               </div>
               <span className={`text-[9px] font-semibold ${isHacker ? 'text-emerald-700 font-mono' : 'text-slate-550'
                 } ${!isAssistant ? 'text-right' : ''}`}>

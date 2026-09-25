@@ -174,13 +174,22 @@ def post_message(
 
     if is_image_request:
         prompt_text = payload.content
-        for trigger in image_triggers:
-            if trigger in content_lower:
-                # Case-insensitive replacement
+        triggers_to_strip = [
+            "create an image of", "create an image", "create image of", "create image",
+            "generate an image of", "generate image of", "generate image",
+            "create a picture of", "create a pic of", "generate a picture of",
+            "make a picture of", "draw a picture of", "make a photo of",
+            "create a photo of", "generate a photo of", "generate a mockup of",
+            "create a panda", "generate a", "create a", "draw a", "make a", "/image"
+        ]
+        for trigger in triggers_to_strip:
+            if trigger in prompt_text.lower():
                 idx = prompt_text.lower().find(trigger)
                 if idx != -1:
-                    prompt_text = prompt_text[:idx] + prompt_text[idx+len(trigger):]
-        prompt_text = prompt_text.strip()
+                    cleaned = prompt_text[:idx] + prompt_text[idx+len(trigger):]
+                    if cleaned.strip():
+                        prompt_text = cleaned
+        prompt_text = prompt_text.strip() or payload.content
 
         async def media_image_generator():
             yield f"data: {json.dumps({'chunk': '🎨 Initalizing AetherMind Image Generation Engine...\n'})}\n\n"
