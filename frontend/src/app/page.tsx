@@ -192,9 +192,25 @@ export default function Home() {
 
   const isHacker = appearanceSettings.interfaceStyle === 'Hacker';
 
-  // Screen routing state
-  const [activeScreen, setActiveScreen] = useState<'splash' | 'dashboard' | 'chat' | 'voice'>('splash');
+  // Screen routing state (Preserves session state across page refreshes)
+  const [activeScreen, setActiveScreen] = useState<'splash' | 'dashboard' | 'chat' | 'voice'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedToken = localStorage.getItem('aether_token') || localStorage.getItem('auth_token');
+      const savedScreen = localStorage.getItem('aether_active_screen');
+      if (savedToken) {
+        return (savedScreen as any) || 'chat';
+      }
+    }
+    return 'splash';
+  });
   const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>('chat');
+
+  // Save active screen to localStorage whenever screen changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aether_active_screen', activeScreen);
+    }
+  }, [activeScreen]);
 
   // Device Simulation and Modal state
   const [selectedDevicePreset, setSelectedDevicePreset] = useState<DevicePreset>(DEVICE_PRESETS[0]);
@@ -556,20 +572,27 @@ export default function Home() {
 
   // Load chat rooms and automatically bypass splash if authenticated
   useEffect(() => {
-    if (token) {
+    const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
+    if (activeToken) {
       loadChats();
-      setActiveScreen('chat');
+      if (activeScreen === 'splash') {
+        setActiveScreen('chat');
+      }
     }
   }, [token]);
 
   const loadChats = async () => {
-    if (!token) return;
+    const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
+    if (!activeToken) return;
     setIsLoadingChats(true);
     try {
-      const data = await apiService.getChats(token!);
+      const data = await apiService.getChats(activeToken);
       setChats(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Failed to load chats:', err);
+      if (err?.status === 401 || err?.message?.includes('401')) {
+        handleLogout();
+      }
     } finally {
       setIsLoadingChats(false);
     }

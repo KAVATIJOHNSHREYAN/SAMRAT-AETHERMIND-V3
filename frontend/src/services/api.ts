@@ -15,12 +15,9 @@ const getBaseUrl = (): string => {
     ) {
       return "http://localhost:8000/api/v1";
     }
-
-    // In production, the backend is hosted under the routePrefix /_/backend
-    return `${origin}/_/backend/api/v1`;
   }
 
-  return "http://localhost:8000/api/v1";
+  return "https://samrat-aethermind-v3.onrender.com/api/v1";
 };
 
 const BASE_URL = getBaseUrl();
