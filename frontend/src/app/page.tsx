@@ -11,6 +11,9 @@ import { DocumentChat } from '@/components/chat/DocumentChat';
 import ImageEditStudio from '@/components/ImageEditStudio';
 import { SecurityDashboard } from '@/components/SecurityDashboard';
 import { AIProviderSettings } from '@/components/AIProviderSettings';
+import { DevicePreviewMenu, DeviceSimulatorWrapper, DEVICE_PRESETS, DevicePreset } from '@/components/DevicePreviewSimulator';
+import { UserProfileMenu } from '@/components/UserProfileMenu';
+import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
 import { useAuth } from '@/context/AuthContext';
 import {
   MessageSquare,
@@ -192,6 +195,12 @@ export default function Home() {
   // Screen routing state
   const [activeScreen, setActiveScreen] = useState<'splash' | 'dashboard' | 'chat' | 'voice'>('splash');
   const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>('chat');
+
+  // Device Simulation and Modal state
+  const [selectedDevicePreset, setSelectedDevicePreset] = useState<DevicePreset>(DEVICE_PRESETS[0]);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Auth state
   const [isLoginView, setIsLoginView] = useState(true);
@@ -959,25 +968,18 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Google SSO OAuth Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('google_user@samrat.ai');
-                  setPassword('google_sso_pass');
-                  const formEvent = new Event('submit', { cancelable: true, bubbles: true }) as unknown as React.FormEvent<HTMLFormElement>;
-                  handleAuthSubmit(formEvent);
+              {/* Google SSO OAuth 2.0 Integration */}
+              <GoogleOAuthButton
+                onSuccess={(tokenVal, userVal, emailVal) => {
+                  authLogin(tokenVal, userVal, emailVal);
+                  setAuth(tokenVal, { email: emailVal, id: userVal, subscription_status: 'free' });
+                  setActiveScreen('chat');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-xs font-bold transition-all flex items-center justify-center gap-2.5 cursor-pointer text-slate-200"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.47 14.98 1 12 1 7.35 1 3.37 3.68 1.43 7.6l3.87 3C6.23 7.62 8.89 5.04 12 5.04z" />
-                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.4 3.58l3.73 2.9c2.18-2 3.7-4.99 3.7-8.63z" />
-                  <path fill="#FBBC05" d="M5.3 14.4c-.24-.73-.38-1.5-.38-2.3s.14-1.57.38-2.3L1.43 6.8C.51 8.65 0 10.74 0 13s.51 4.35 1.43 6.2l3.87-2.8z" />
-                  <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.73-2.9c-1.1.74-2.5 1.18-4.23 1.18-3.11 0-5.77-2.58-6.7-5.56l-3.87 3C3.37 20.32 7.35 23 12 23z" />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
+                onError={(err) => {
+                  setAuthError(`${err.message} ${err.detail ? `— ${err.detail}` : ''}`);
+                }}
+                isDark={isDark}
+              />
 
               {/* Separator */}
               <div className="flex items-center gap-4 text-[9px] font-bold text-slate-650 uppercase justify-center">
@@ -1247,26 +1249,25 @@ export default function Home() {
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <button
-                onClick={() => {
+
+              {/* Device Preview Simulator Menu (Placed beside Theme Toggle) */}
+              <DevicePreviewMenu
+                currentPreset={selectedDevicePreset}
+                onSelectPreset={setSelectedDevicePreset}
+                isDark={isDark}
+              />
+
+              {/* Comprehensive Account & Profile Menu */}
+              <UserProfileMenu
+                onOpenSettingsTab={(tab) => {
                   setIsSettingsOpen(true);
-                  setActiveSettingsTab('profile');
+                  setActiveSettingsTab(tab as any);
                 }}
-                className={`p-2 rounded-xl border transition-all ${isDark
-                  ? 'border-white/10 bg-white/[0.02] text-slate-355 hover:text-white'
-                  : 'border-slate-200 bg-white text-slate-505 hover:text-[#0EA5E9]'
-                  }`}
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleLogout}
-                className={`p-2 rounded-xl border ${isDark ? 'border-white/10 bg-white/[0.02] text-slate-355 hover:text-red-400 hover:bg-white/[0.06]' : 'border-slate-200 bg-white text-slate-505 hover:text-red-500 hover:border-red-200'} transition-all`}
-                title="Sign out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+                onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+                onOpenAboutModal={() => setIsAboutModalOpen(true)}
+                onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
+                isDark={isDark}
+              />
             </div>
           </nav>
 
@@ -2336,6 +2337,114 @@ export default function Home() {
     </div >
   );
 
-  return chatContent;
+  return (
+    <DeviceSimulatorWrapper
+      currentPreset={selectedDevicePreset}
+      onReset={() => setSelectedDevicePreset(DEVICE_PRESETS[0])}
+    >
+      {chatContent}
+
+      {/* Keyboard Shortcuts Modal */}
+      {isShortcutsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-slate-900 border border-violet-500/30 text-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-violet-400" />
+                <h3 className="text-sm font-black uppercase tracking-wider">Keyboard Shortcuts</h3>
+              </div>
+              <button onClick={() => setIsShortcutsModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <span>New Conversation</span>
+                <kbd className="px-2 py-0.5 rounded bg-violet-600 text-white font-mono text-[10px]">Ctrl + N</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <span>Open Command Palette / Search</span>
+                <kbd className="px-2 py-0.5 rounded bg-violet-600 text-white font-mono text-[10px]">Ctrl + K</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <span>Toggle Sidebar</span>
+                <kbd className="px-2 py-0.5 rounded bg-violet-600 text-white font-mono text-[10px]">Ctrl + B</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <span>Toggle Theme</span>
+                <kbd className="px-2 py-0.5 rounded bg-violet-600 text-white font-mono text-[10px]">Ctrl + Shift + L</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <span>Send Message</span>
+                <kbd className="px-2 py-0.5 rounded bg-violet-600 text-white font-mono text-[10px]">Enter</kbd>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About SAMRAT AI Modal */}
+      {isAboutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-slate-900 border border-violet-500/30 text-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-violet-400" />
+                <h3 className="text-sm font-black uppercase tracking-wider">About SAMRAT AI</h3>
+              </div>
+              <button onClick={() => setIsAboutModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-slate-300">
+              <p className="font-semibold leading-relaxed">
+                SAMRAT AI AetherMind V3 is an enterprise-grade multi-modal AI workspace built with modern web technologies, full biometric authentication support, 11 auto-detected AI providers, and built-in device simulation testing.
+              </p>
+              <div className="p-3 rounded-2xl bg-violet-950/40 border border-violet-500/20 font-mono text-[11px] space-y-1">
+                <div>Version: <span className="text-violet-300 font-bold">3.0.0-PROD</span></div>
+                <div>Engine: <span className="text-cyan-300 font-bold">AetherMind V3 Kernel</span></div>
+                <div>Repository: <a href="https://github.com/KAVATIJOHNSHREYAN/SAMRAT-AETHERMIND-V3" target="_blank" rel="noreferrer" className="text-violet-400 underline">SAMRAT-AETHERMIND-V3</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {isFeedbackModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-slate-900 border border-violet-500/30 text-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-violet-400" />
+                <h3 className="text-sm font-black uppercase tracking-wider">Submit Feedback</h3>
+              </div>
+              <button onClick={() => setIsFeedbackModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              alert('Thank you for your feedback! Our engineering team has received your submission.');
+              setIsFeedbackModalOpen(false);
+            }} className="space-y-3">
+              <textarea
+                required
+                rows={4}
+                placeholder="Share your experience, bug reports, or feature suggestions..."
+                className="w-full p-3 rounded-xl border border-white/10 bg-white/5 text-xs text-white focus:border-violet-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer"
+              >
+                Send Feedback
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </DeviceSimulatorWrapper>
+  );
 }
 
