@@ -1430,7 +1430,7 @@ export default function Home() {
               {/* Standard Chat Panel */}
               {workspaceTab === 'chat' && (
                 <>
-                  <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 pb-44">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 pb-72 md:pb-80">
         {!activeChatId ? (
           <div className="min-h-full flex flex-col items-center justify-center relative overflow-hidden px-6 py-12">
             {/* Soft Space planetary background arcs and star dust field */}
@@ -1551,13 +1551,13 @@ export default function Home() {
           </div>
         );
       })}
-      <div ref={messagesEndRef} />
+      <div ref={messagesEndRef} className="h-36 w-full shrink-0" />
     </div>
                 )}
               </div>
 
-<div className="absolute bottom-0 inset-x-0 p-4 transition-all z-10 bg-transparent">
-  <div className="w-full max-w-3xl mx-auto flex flex-col gap-2">
+<div className="absolute bottom-0 inset-x-0 p-4 pt-8 transition-all z-20 bg-gradient-to-t from-[#070513] via-[#070513]/90 to-transparent pointer-events-none">
+  <div className="w-full max-w-3xl mx-auto flex flex-col gap-2 pointer-events-auto">
     {chatAttachment && (
       <div className="p-2 border border-slate-250 rounded-xl flex items-center justify-between gap-3 bg-[#0c0c17] shadow-md">
         <div className="flex items-center gap-2">
