@@ -83,7 +83,7 @@ async def general_exception_handler(request, exc):
     )
 
 # Static uploads
-if os.getenv("VERCEL"):
+if os.getenv("VERCEL") or os.getenv("RENDER"):
     uploads_dir = "/tmp/uploads"
 else:
     uploads_dir = os.path.abspath(
