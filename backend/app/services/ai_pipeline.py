@@ -66,23 +66,22 @@ async def generate_response_stream(
     user_id: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
 
-    # Rate Limiting
-    REQUEST_DELAY = 4.0
-    tracking_key = user_id or "anonymous"
+    # Rate Limiting (Minimal anti-spam buffer per session)
+    REQUEST_DELAY = 0.5
+    tracking_key = user_id or gemini_key or "anon_session"
     current_time = time.time()
     last_allowed_time = _user_last_request_time.get(tracking_key, 0.0)
 
     if current_time < last_allowed_time + REQUEST_DELAY:
         wait_time = (last_allowed_time + REQUEST_DELAY) - current_time
-        yield f"Please wait {wait_time:.1f}s before sending another message...\n\n"
         await asyncio.sleep(wait_time)
 
     _user_last_request_time[tracking_key] = time.time()
 
     context_str = ""
 
-    # RAG Search
-    if enable_rag and chat_mode in ["general", "voice"]:
+    # RAG Search (Only perform vector search if query requires deep context)
+    if enable_rag and chat_mode in ["general", "voice"] and len(query.strip()) > 15:
         api_key = gemini_key or openai_key
         docs = similarity_search(query, k=rag_k, api_key=api_key)
 
@@ -109,21 +108,21 @@ async def generate_response_stream(
         elif chat_mode == "voice":
             system_instructions += " Keep responses short and conversational."
 
-    # Static Fallback Replies
-    fallback_replies = {
-        "hello": "Hello! AetherMind is online.",
-        "who created you": "Mister Samrat created me for assistance.",
-        "what is your name": "I am AetherMind."
-    }
+    # Instant High-Speed Keyword Matching for simple greetings
+    import re
+    query_clean = query.lower().strip()
+    words_in_query = set(re.findall(r'\b\w+\b', query_clean))
 
-    query_lower = query.lower()
-
-    for key, value in fallback_replies.items():
-        if key in query_lower:
-            for word in value.split():
-                yield word + " "
-                await asyncio.sleep(0.05)
-            return
+    greeting_words = {"hi", "hello", "hey", "hola", "greetings", "good morning", "good evening"}
+    if query_clean in greeting_words or (len(words_in_query) == 1 and bool(words_in_query.intersection(greeting_words))):
+        greeting_text = (
+            "Hello! I am **AetherMind**, your advanced AI assistant created by **Mister Samrat**.\n\n"
+            "I am fully online and ready to assist you with your projects, coding, document intelligence, and multi-modal tasks!"
+        )
+        for word in greeting_text.split(" "):
+            yield word + " "
+            await asyncio.sleep(0.01)
+        return
 
     # Redirection to the Multi-Provider Orchestration System (AI Router)
     from app.services.ai_router import ai_router

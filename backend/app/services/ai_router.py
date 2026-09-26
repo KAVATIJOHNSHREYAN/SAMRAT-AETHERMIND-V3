@@ -314,11 +314,14 @@ class AIRouter:
                     content_parts: List[Any] = [genai_types.Part.from_text(text="\n".join(text_parts))] + multimodal_parts
                     config = genai_types.GenerateContentConfig(temperature=temperature)
 
-                    response = await asyncio.to_thread(
-                        client.models.generate_content_stream,
-                        model=model_name,
-                        contents=content_parts,
-                        config=config
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            client.models.generate_content_stream,
+                            model=model_name,
+                            contents=content_parts,
+                            config=config
+                        ),
+                        timeout=6.0
                     )
 
                     # Read stream
@@ -457,17 +460,32 @@ class AIRouter:
                 last_error = str(e)
                 logger.error(f"AIRouter error on provider={provider}: {last_error}")
                 log_router_event(provider, model_name, time.time() - start_time, 0, 0.0, error=last_error)
-                # Continue loop to next fallback provider
-                await asyncio.sleep(1.0)
+                # Fast retry fallback
+                await asyncio.sleep(0.05)
 
         # If all providers fail
         yield f"\n\nAetherMind: All configured AI services failed to respond. (Last Error: {last_error})"
 
     async def _async_generator_wrapper(self, sync_generator):
-        """Converts a standard synchronous iterable stream to async generator safely."""
-        for item in sync_generator:
-            yield item
-            await asyncio.sleep(0.01)
+        """Converts a standard synchronous iterable stream to async generator safely by running blocking next() in thread pool."""
+        def get_next():
+            try:
+                return next(sync_generator)
+            except StopIteration:
+                return None
+            except Exception as e:
+                raise e
+
+        while True:
+            try:
+                item = await asyncio.to_thread(get_next)
+                if item is None:
+                    break
+                yield item
+                await asyncio.sleep(0.005)
+            except Exception as e:
+                logger.warning(f"Error in _async_generator_wrapper chunk read: {e}")
+                break
 
 # Singleton Instance
 ai_router = AIRouter()
