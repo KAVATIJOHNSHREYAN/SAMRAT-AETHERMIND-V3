@@ -1,4 +1,5 @@
 # 🌌 SAMRAT AETHERMIND V3
+### *Building SAMRAT AETHERMIND V3: A Journey Toward an Intelligent Multi-Modal AI Platform*
 
 [![Deployment - Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel&logoColor=white)](https://samrat-aethermind-v3.vercel.app)
 [![Deployment - Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=white)](https://samrat-aethermind-v3.onrender.com)
@@ -6,7 +7,7 @@
 [![Backend - FastAPI](https://img.shields.io/badge/Backend-FastAPI%200.110-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License - MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**SAMRAT AETHERMIND V3** is a multi-modal AI platform featuring real-time voice synthesis, multi-model AI routing (Gemini, OpenAI, Anthropic, DeepSeek), document analysis (RAG), creative image editing, biometrics, and Google OAuth 2.0.
+**SAMRAT AETHERMIND V3** is an **Intelligent Multi-Modal AI Platform** — not just a chatbot. It integrates real-time voice synthesis and dual voice modes, multi-model AI routing (Gemini, OpenAI, Anthropic, DeepSeek), RAG document analysis, AI image studio and editing pipeline, WebAuthn biometrics, and Google OAuth 2.0.
 
 ---
 

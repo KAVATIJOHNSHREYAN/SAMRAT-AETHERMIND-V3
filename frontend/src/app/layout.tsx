@@ -3,8 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "SAMRAT AI - Advanced AI Chat Platform",
-  description: "A production-grade AI conversational interface utilizing FastAPI, Next.js, and advanced RAG pipeline workflows.",
+  title: "SAMRAT AETHERMIND V3 | Intelligent Multi-Modal AI Platform",
+  description: "Building SAMRAT AETHERMIND V3: A Journey Toward an Intelligent Multi-Modal AI Platform. Integrated RAG document chat, real-time voice intelligence, AI image studio, and multi-model routing.",
 };
 
 export default function RootLayout({

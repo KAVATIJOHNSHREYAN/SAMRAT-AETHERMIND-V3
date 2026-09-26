@@ -1,16 +1,18 @@
-/* Central Branding Configuration for SAMRAT AETHERMIND */
+/* Central Branding Configuration for SAMRAT AETHERMIND V3 */
 export const BRANDING_CONFIG = {
   assistantName: 'AetherMind',
-  appName: 'SAMRAT AETHERMIND',
-  voiceName: 'AetherMind Voice Assistant',
+  appName: 'SAMRAT AETHERMIND V3',
+  tagline: 'Building SAMRAT AETHERMIND V3: A Journey Toward an Intelligent Multi-Modal AI Platform',
+  platformTitle: 'Intelligent Multi-Modal AI Platform',
+  voiceName: 'AetherMind Multi-Modal Intelligence Engine',
   wakeWord: 'AetherMind',
-  defaultGreeting: 'Hello! I am AetherMind, your personal AI assistant. How may I assist you today?',
-  friendlyGreeting: "Hi! I am AetherMind, your personal AI assistant. I'm ready to help you with anything you need.",
-  welcomeTitle: '👋 Hello! I am AetherMind.',
-  welcomeSubtitle: 'Your intelligent AI assistant is ready.',
-  welcomeCallToAction: 'Authenticate using the security controls on the right or begin chatting to get started.',
+  defaultGreeting: 'Hello! Welcome to SAMRAT AETHERMIND V3, your Intelligent Multi-Modal AI Platform. How can we innovate today?',
+  friendlyGreeting: "Hi! Welcome to SAMRAT AETHERMIND V3, your Intelligent Multi-Modal AI Platform. Ready for deep multi-modal reasoning.",
+  welcomeTitle: '🌌 SAMRAT AETHERMIND V3',
+  welcomeSubtitle: 'Building SAMRAT AETHERMIND V3: A Journey Toward an Intelligent Multi-Modal AI Platform',
+  welcomeCallToAction: 'Authenticate using security controls or start exploring multi-modal capabilities.',
   avatarUrl: '/echo_mind_bot.png',
   logoUrl: '/echo_mind_bot.png',
-  voicePrompt: 'You are AetherMind, an intelligent, professional, and friendly AI assistant.',
-  accessibilityLabel: 'AetherMind Voice Assistant',
+  voicePrompt: 'You are AetherMind, an advanced Intelligent Multi-Modal AI Platform engineered for high-performance multi-modal reasoning, real-time voice interaction, document intelligence, and visual art creation.',
+  accessibilityLabel: 'AetherMind Multi-Modal Intelligence Engine',
 };
