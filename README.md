@@ -22,14 +22,32 @@
 ## ✨ Key Features
 
 - 🤖 **Multi-Engine AI Routing**: Dynamically switch between Google Gemini, OpenAI GPT-4, Anthropic Claude, and DeepSeek.
-- 🎙️ **Real-Time Voice Assistant ("AetherMind")**: Includes interactive canvas voice visualizers (Vortex Visualizer), speech recognition, and low-latency speech synthesis.
+- 🎙️ **Real-Time Voice Assistant ("AetherMind")**: Includes dual voice modes (Push-to-Talk & Continuous Live Voice Assistant), customizable wake words, audio level visualizer, and low-latency speech synthesis.
 - 📄 **RAG Document Chat**: Upload PDF documents, automatically parse text embeddings, and perform question-answering with citation context.
-- 🎨 **Image Editing & Generation Studio**: Multi-modal image generation and canvas manipulation powered by AI models.
+- 🎨 **Image Studio & Editing Pipeline**: Text-to-Image AI generation and canvas tools (Remove BG, Replace BG, Inpaint, Outpaint, 2x Upscale, Face Enhancement) with side-by-side Before/After comparison.
+- 🔄 **ChatGPT-Style Full Session Persistence**: Refreshing the browser restores exact active conversation history, unsent draft text, selected workspace tab, and Image Studio history without creating redundant new chats.
 - 🔐 **Multi-Authentication System**:
   - **Google OAuth 2.0** integration.
   - **WebAuthn Biometric Auth** (Fingerprint & Face ID hardware support).
   - JWT session token management with bcrypt password hashing.
 - 🌙 **Modern Cyberpunk & Dark Mode UI**: Built with Next.js Turbopack, Tailwind CSS, Lucide icons, glassmorphism aesthetics, and customizable themes.
+
+---
+
+## ⌨️ Keyboard Shortcuts & Quick Controls
+
+SAMRAT AETHERMIND V3 supports keyboard shortcuts to accelerate productivity across the workspace:
+
+| Shortcut | Action | Scope |
+| :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> / <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> | **New Chat** (Start a fresh conversation) | Global |
+| <kbd>Enter</kbd> | **Send Message** / Submit Prompt | Chat & Image Studio |
+| <kbd>Shift</kbd> + <kbd>Enter</kbd> | **Insert Newline** (Multi-line prompt input) | Chat Input |
+| <kbd>Space</kbd> | **Push-to-Talk Mic** (Hold/Press to speak) | Voice Assistant Mode |
+| <kbd>Esc</kbd> | **Close Modal** / Exit Fullscreen Lightbox | All Modals & Image Studio |
+| <kbd>Ctrl</kbd> + <kbd>/</kbd> / <kbd>Cmd</kbd> + <kbd>/</kbd> | **Show Keyboard Shortcuts Menu** | Global |
+
+---
 
 ---
 
