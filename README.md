@@ -23,10 +23,17 @@
 ## ✨ Key Features
 
 - 🤖 **Multi-Engine AI Routing**: Dynamically switch between Google Gemini, OpenAI GPT-4, Anthropic Claude, and DeepSeek.
-- 🎙️ **Real-Time Voice Assistant ("AetherMind")**: Includes dual voice modes (Push-to-Talk & Continuous Live Voice Assistant), customizable wake words, audio level visualizer, and low-latency speech synthesis.
+- 🪄 **AI Magic Prompt Optimizer**: 1-Click Prompt Enhancer button next to text input areas that expands short prompts into hyper-detailed, photorealistic, and context-rich prompts.
+- 📁 **Visual Media Cloud Vault & Gallery**: Dedicated media library tab to search, filter by tool, preview, and batch-download all past AI artwork, voice recordings, and edited photos.
+- 🎙️ **API-less Audio & Voice Neural Studio**:
+  - Neural Text-to-Speech (TTS) synthesis with custom voice selection, pitch/rate modulation, and tone emotion presets.
+  - Interactive HTML5 Audio Waveform visualizer canvas rendering real-time animated sine waves.
+  - Real-time voice input with streaming transcription and spoken AI answers.
 - 📄 **RAG Document Chat**: Upload PDF documents, automatically parse text embeddings, and perform question-answering with citation context.
-- 🎨 **Image Studio & Editing Pipeline**: Text-to-Image AI generation and canvas tools (Remove BG, Replace BG, Inpaint, Outpaint, 2x Upscale, Face Enhancement) with side-by-side Before/After comparison.
-- 🔄 **ChatGPT-Style Full Session Persistence**: Refreshing the browser restores exact active conversation history, unsent draft text, selected workspace tab, and Image Studio history without creating redundant new chats.
+- 🎨 **Image Studio & Editing Pipeline (Quota-Proof IndexedDB)**:
+  - Text-to-Image generation & 6 AI editing tools (Remove BG, Replace BG, Inpaint, Outpaint, 2x Upscale, Face Enhancement).
+  - High-capacity IndexedDB (`AetherMindImageDB`) storage engine with `safeStorage` guard to eliminate browser quota crashes.
+- 🔄 **ChatGPT-Style Full Session Persistence**: Refreshing the browser restores exact active conversation history, unsent draft text, selected workspace tab, and Image Studio history.
 - 🔐 **Multi-Authentication System**:
   - **Google OAuth 2.0** integration.
   - **WebAuthn Biometric Auth** (Fingerprint & Face ID hardware support).

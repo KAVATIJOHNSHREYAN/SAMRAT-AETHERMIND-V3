@@ -30,6 +30,7 @@ import {
   FileImage,
   Layers2
 } from 'lucide-react';
+import PromptEnhancerButton from './PromptEnhancerButton';
 
 interface ImageEditStudioProps {
   token: string;
@@ -516,7 +517,14 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-slate-950/70 border border-slate-850 rounded-2xl p-4 shadow-xl space-y-4">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Prompt</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Prompt</label>
+                <PromptEnhancerButton
+                  currentPrompt={genPrompt}
+                  onEnhance={(enhanced) => setGenPrompt(enhanced)}
+                  type="image"
+                />
+              </div>
               <textarea
                 rows={4}
                 value={genPrompt}

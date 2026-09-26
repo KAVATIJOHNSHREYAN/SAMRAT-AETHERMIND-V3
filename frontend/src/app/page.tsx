@@ -10,6 +10,8 @@ import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
 import { DocumentChat } from '@/components/chat/DocumentChat';
 import ImageEditStudio from '@/components/ImageEditStudio';
 import AudioVoiceStudio from '@/components/AudioVoiceStudio';
+import MediaVaultGallery from '@/components/MediaVaultGallery';
+import PromptEnhancerButton from '@/components/PromptEnhancerButton';
 import { SecurityDashboard } from '@/components/SecurityDashboard';
 import { AIProviderSettings } from '@/components/AIProviderSettings';
 import { DevicePreviewMenu, DeviceSimulatorWrapper, DEVICE_PRESETS, DevicePreset } from '@/components/DevicePreviewSimulator';
@@ -21,6 +23,7 @@ import {
   MessageSquare,
   Mic,
   Volume2,
+  Folder,
   ArrowRight,
   ChevronRight,
   Bell,
@@ -232,7 +235,7 @@ export default function Home() {
     }
     return 'splash';
   });
-  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit' | 'audioVoice'>(() => {
+  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit' | 'audioVoice' | 'mediaVault'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('aether_workspace_tab') as any) || 'chat';
     }
@@ -1346,7 +1349,8 @@ export default function Home() {
                 { id: 'chat', label: 'Standard Chat', icon: MessageSquare },
                 { id: 'docChat', label: 'DocMind AI', icon: FileText },
                 { id: 'imageEdit', label: 'Image Studio', icon: Image },
-                { id: 'audioVoice', label: 'Audio & Voice Studio', icon: Volume2 }
+                { id: 'audioVoice', label: 'Audio Studio', icon: Volume2 },
+                { id: 'mediaVault', label: 'Cloud Vault', icon: Folder }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1559,6 +1563,13 @@ export default function Home() {
                 </div>
               )}
 
+              {/* Visual Media Cloud Vault & Gallery Panel */}
+              {workspaceTab === 'mediaVault' && (
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
+                  <MediaVaultGallery />
+                </div>
+              )}
+
               {/* Standard Chat Panel */}
               {workspaceTab === 'chat' && (
                 <>
@@ -1766,6 +1777,12 @@ export default function Home() {
         <Wand2 className="w-3.5 h-3.5 text-cyan-400" />
         <span className="text-[10px] hidden sm:inline">Create Image</span>
       </button>
+
+      <PromptEnhancerButton
+        currentPrompt={chatInput}
+        onEnhance={(enhanced) => setChatInput(enhanced)}
+        type={chatInput.startsWith('/image') ? 'image' : 'general'}
+      />
 
       <form onSubmit={handleSendTextMessage} className="flex-1 flex items-center gap-2">
         <textarea
