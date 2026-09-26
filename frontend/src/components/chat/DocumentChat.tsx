@@ -168,7 +168,8 @@ export function DocumentChat({ externalPdfs, externalSelectedPdf, onPdfsChange, 
     setLoading(true);
     setErrorMsg(null);
     try {
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const envUrl = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
+      const BASE_URL = envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
       const res = await fetch(`${BASE_URL}/doc-chat/convert/${selectedPdf.pdf_id}?format=${format}`, {
         headers: {
           'Authorization': `Bearer ${token}`

@@ -35,6 +35,11 @@ interface ImageEditStudioProps {
   token: string;
 }
 
+const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
+  return envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
+};
+
 interface ImageResult {
   success: boolean;
   provider: string;
@@ -210,7 +215,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
 
     try {
       const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
+      const BASE_URL = getApiBaseUrl();
       const res = await fetch(`${BASE_URL}/image/generate`, {
         method: 'POST',
         headers: {
@@ -300,7 +305,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
 
     try {
       const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
+      const BASE_URL = getApiBaseUrl();
       const res = await fetch(`${BASE_URL}/image-edit/process`, {
         method: 'POST',
         headers: {
@@ -570,7 +575,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
                       className="max-h-[440px] w-auto object-contain rounded-2xl transition-transform duration-300 group-hover:scale-[1.01]"
                       onError={(e) => {
                         console.warn('Direct image load error, falling back to proxy');
-                        const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1'}/image/proxy?url=${encodeURIComponent(genResult.imageUrl)}`;
+                        const proxyUrl = `${getApiBaseUrl()}/image/proxy?url=${encodeURIComponent(genResult.imageUrl)}`;
                         e.currentTarget.src = proxyUrl;
                       }}
                     />
