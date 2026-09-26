@@ -13,6 +13,20 @@ from app.db.models import User
 
 # Security definitions
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
+
+def get_optional_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional), db: Session = Depends(get_db)) -> Optional[User]:
+    if not credentials:
+        return None
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id:
+            return db.query(User).filter(User.id == user_id).first()
+    except Exception:
+        pass
+    return None
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

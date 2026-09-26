@@ -209,12 +209,13 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     const finalPrompt = selectedPreset ? `${promptToUse}, ${selectedPreset.suffix}` : promptToUse;
 
     try {
+      const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
       const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
       const res = await fetch(`${BASE_URL}/image/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(activeToken ? { 'Authorization': `Bearer ${activeToken}` } : {})
         },
         body: JSON.stringify({
           prompt: finalPrompt,
@@ -298,12 +299,13 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     const startTime = Date.now();
 
     try {
+      const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
       const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
       const res = await fetch(`${BASE_URL}/image-edit/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(activeToken ? { 'Authorization': `Bearer ${activeToken}` } : {})
         },
         body: JSON.stringify({
           image,

@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
-from app.api.v1.auth import get_current_user
+from app.api.v1.auth import get_current_user, get_optional_current_user
 from app.db.models import User
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def run_replicate_prediction(version_id: str, inputs: dict, api_key: str) -> str
     raise HTTPException(status_code=504, detail="Replicate prediction timed out")
 
 @router.post("/process")
-def process_image_edit(payload: ImageEditRequest, current_user: User = Depends(get_current_user)):
+def process_image_edit(payload: ImageEditRequest, current_user: Optional[User] = Depends(get_optional_current_user)):
     start_time = time.time()
     effective_key = payload.replicate_key or os.getenv("REPLICATE_API_KEY")
 

@@ -64,7 +64,9 @@ import {
   Image,
   ShieldCheck,
   Fingerprint,
-  ScanFace
+  ScanFace,
+  Scissors,
+  Wand2
 } from 'lucide-react';
 
 // Helper to render message content with media blocks
@@ -99,21 +101,45 @@ function renderMessageContent(content: string) {
       const alt = match[1] || 'Generated Image';
       const src = match[2];
       parts.push(
-        <div key={`img-${key++}`} className="my-3 rounded-2xl overflow-hidden border border-slate-800 shadow-md group relative max-w-lg">
+        <div key={`img-${key++}`} className="my-3 rounded-2xl overflow-hidden border border-violet-500/30 shadow-2xl group relative max-w-lg bg-slate-950">
           <img
             src={src}
             alt={alt}
-            className="w-full max-h-[400px] object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+            className="w-full max-h-[420px] object-contain rounded-2xl transition-transform duration-300 group-hover:scale-[1.01]"
+            onError={(e) => {
+              const proxyUrl = `https://samrat-aethermind-v3.onrender.com/api/v1/image/proxy?url=${encodeURIComponent(src)}`;
+              e.currentTarget.src = proxyUrl;
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-            <a
-              href={src}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 bg-violet-600 hover:bg-violet-550 text-white rounded-lg text-[10px] font-bold"
-            >
-              Open original
-            </a>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between p-3.5 rounded-b-2xl">
+            <span className="text-[10px] font-mono font-bold text-cyan-300 truncate max-w-[140px]">
+              AetherMind Art
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('aether_editor_image', src);
+                    localStorage.setItem('aether_workspace_tab', 'imageEdit');
+                    window.dispatchEvent(new CustomEvent('aether_switch_workspace', { detail: 'imageEdit' }));
+                  }
+                }}
+                className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-550 text-white rounded-lg text-[10px] font-bold shadow-md flex items-center gap-1 cursor-pointer"
+              >
+                <Scissors className="w-3 h-3" />
+                <span>Edit in Studio</span>
+              </button>
+              <a
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                className="px-2.5 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-[10px] font-bold flex items-center gap-1"
+              >
+                <Eye className="w-3 h-3" />
+                <span>High-Res</span>
+              </a>
+            </div>
           </div>
         </div>
       );
@@ -1709,6 +1735,26 @@ export default function Home() {
           <Paperclip className="w-4 h-4" />
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          if (!chatInput.startsWith('/image')) {
+            setChatInput('/image ' + (chatInput.trim() ? chatInput.trim() : 'a futuristic cyberpunk scene'));
+          } else {
+            setChatInput(chatInput.replace('/image', '').trim());
+          }
+        }}
+        className={`p-2 py-1.5 rounded-full border transition-all flex items-center gap-1.5 font-bold text-xs flex-shrink-0 cursor-pointer ${
+          chatInput.startsWith('/image')
+            ? 'border-cyan-500 bg-cyan-500/20 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+            : isDark ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+        }`}
+        title="ChatGPT DALL-E Mode: Generate AI Images directly in Chat"
+      >
+        <Wand2 className="w-3.5 h-3.5 text-cyan-400" />
+        <span className="text-[10px] hidden sm:inline">Create Image</span>
+      </button>
 
       <form onSubmit={handleSendTextMessage} className="flex-1 flex items-center gap-2">
         <textarea
