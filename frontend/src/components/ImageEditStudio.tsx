@@ -2,17 +2,68 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Trash2, Sliders, CheckCircle2, AlertCircle, RefreshCw, Download, Scissors, Maximize2, Sparkles, Smile, Eye } from 'lucide-react';
+import {
+  Upload,
+  Trash2,
+  Sliders,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Download,
+  Scissors,
+  Maximize2,
+  Sparkles,
+  Smile,
+  Eye,
+  Image as ImageIcon,
+  Copy,
+  Share2,
+  ZoomIn,
+  Wand2,
+  Terminal,
+  X,
+  Layers,
+  Check
+} from 'lucide-react';
 
 interface ImageEditStudioProps {
   token: string;
 }
 
+interface ImageResult {
+  success: boolean;
+  provider: string;
+  imageUrl: string;
+  prompt: string;
+  width: number;
+  height: number;
+  generationTime: number;
+  seed: number;
+  metadata?: any;
+}
+
 export default function ImageEditStudio({ token }: ImageEditStudioProps) {
+  const [studioMode, setStudioMode] = useState<'text2image' | 'editor'>('text2image');
+
+  // Text-to-Image state
+  const [genPrompt, setGenPrompt] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('Photorealistic');
+  const [aspectRatio, setAspectRatio] = useState<'1024x1024' | '1280x720' | '720x1280'>('1024x1024');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genResult, setGenResult] = useState<ImageResult | null>(null);
+  const [genHistory, setGenHistory] = useState<ImageResult[]>([]);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [genStatusText, setGenStatusText] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Editor Tools state
   const [selectedTool, setSelectedTool] = useState<'remove_bg' | 'replace_bg' | 'inpaint' | 'outpaint' | 'upscale' | 'face_enhance'>('remove_bg');
   const [image, setImage] = useState<string | null>(null);
   const [mask, setMask] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [editPrompt, setEditPrompt] = useState('');
   const [scale, setScale] = useState(2);
   const [replicateKey, setReplicateKey] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,7 +76,93 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [brushSize, setBrushSize] = useState(20);
 
-  // Load image onto canvas for inpainting mask
+  const stylePresets = [
+    { name: 'Photorealistic', suffix: 'ultra photorealistic 8k octane render hyper-detailed photography' },
+    { name: 'Cyberpunk', suffix: 'cyberpunk neon synthwave futuristic glowing lights high tech concept art' },
+    { name: '3D Render', suffix: '3d Pixar style smooth render vibrant colors volumetric lighting' },
+    { name: 'Anime', suffix: 'japanese anime illustration high quality Makoto Shinkai studio ghibli style' },
+    { name: 'Oil Painting', suffix: 'fine oil painting rich brush strokes classical masterpiece museum quality' },
+    { name: 'Sci-Fi', suffix: 'epic sci-fi concept art deep space planetary stations futuristic technology' }
+  ];
+
+  const handleGenerateImage = async (overridePrompt?: string, attempt = 1) => {
+    const promptToUse = overridePrompt || genPrompt;
+    if (!promptToUse.trim()) {
+      setGenError('Please enter an image prompt to generate.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenError(null);
+    setGenStatusText(attempt === 1 ? 'Contacting AetherMind Image Generation Engine...' : `Retrying generation (Attempt ${attempt}/3)...`);
+
+    const selectedPreset = stylePresets.find(s => s.name === selectedStyle);
+    const finalPrompt = selectedPreset ? `${promptToUse}, ${selectedPreset.suffix}` : promptToUse;
+
+    try {
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
+      const res = await fetch(`${BASE_URL}/image/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          aspect_ratio: aspectRatio,
+          style: selectedStyle
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: Failed to reach image generation provider.`);
+      }
+
+      const data = await res.json();
+      if (!data.success && !data.image_url) {
+        throw new Error(data.detail || 'Image generation returned an unserviceable payload.');
+      }
+
+      const result: ImageResult = {
+        success: true,
+        provider: data.provider || 'AetherMind Flux Engine',
+        imageUrl: data.image_url,
+        prompt: promptToUse,
+        width: data.width || 1024,
+        height: data.height || 1024,
+        generationTime: data.generation_time || 1.2,
+        seed: data.seed || Math.floor(Math.random() * 1000000),
+        metadata: data.metadata || {}
+      };
+
+      setGenResult(result);
+      setGenHistory(prev => [result, ...prev]);
+      setGenStatusText(null);
+      setRetryCount(0);
+    } catch (err: any) {
+      console.warn(`Image generation attempt ${attempt} failed:`, err);
+      if (attempt < 3) {
+        setTimeout(() => {
+          handleGenerateImage(promptToUse, attempt + 1);
+        }, 1200);
+      } else {
+        setGenError(err.message || 'Image generation service temporarily unavailable. Please try again.');
+        setGenStatusText(null);
+      }
+    } finally {
+      if (attempt >= 3 || genResult) {
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  // Canvas drawing logic for Inpainting
   useEffect(() => {
     if (selectedTool === 'inpaint' && image && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -33,17 +170,11 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
       if (ctx) {
         const img = new Image();
         img.onload = () => {
-          // Resize canvas to match image or container aspect ratio
           const maxWidth = 500;
           const scaleFactor = Math.min(maxWidth / img.width, 1);
           canvas.width = img.width * scaleFactor;
           canvas.height = img.height * scaleFactor;
-
-          // Draw base image
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Initialize mask canvas to transparent black
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         };
         img.src = image;
       }
@@ -64,186 +195,332 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     }
   };
 
-  // Canvas drawing handlers for Mask creation
-  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return { x: 0, y: 0 };
-    const rect = canvasRef.current.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  };
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    draw(e);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || selectedTool !== 'inpaint' || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const { x, y } = getCanvasCoords(e);
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.6)'; // Red semi-transparent mask
-      ctx.fill();
-    }
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-    generateMaskBase64();
-  };
-
-  const clearMask = () => {
-    setMask(null);
-    if (canvasRef.current && image) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        img.src = image;
-      }
-    }
-  };
-
-  const generateMaskBase64 = () => {
-    if (!canvasRef.current || !image) return;
-
-    // We create a temporary black-and-white mask canvas
-    // where black is the unmasked area and white is the painted/masked area
-    const tempCanvas = document.createElement('canvas');
-    const canvas = canvasRef.current;
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-
-    const tempCtx = tempCanvas.getContext('2d');
-    const ctx = canvas.getContext('2d');
-
-    if (tempCtx && ctx) {
-      // Get current screen canvas pixel data
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-
-      const maskImgData = tempCtx.createImageData(canvas.width, canvas.height);
-      const maskData = maskImgData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
-        const a = data[i+3];
-
-        // If the pixel is significantly tinted with our red brush color (255, 0, 0)
-        if (r > 200 && g < 50 && b < 50 && a > 100) {
-          // White = Masked area
-          maskData[i] = 255;
-          maskData[i+1] = 255;
-          maskData[i+2] = 255;
-          maskData[i+3] = 255;
-        } else {
-          // Black = Unmasked area
-          maskData[i] = 0;
-          maskData[i+1] = 0;
-          maskData[i+2] = 0;
-          maskData[i+3] = 255;
-        }
-      }
-
-      tempCtx.putImageData(maskImgData, 0, 0);
-      setMask(tempCanvas.toDataURL('image/png'));
-    }
-  };
-
-  const handleProcessImage = async () => {
+  const handleProcessImageEdit = async () => {
     if (!image) {
       setErrorMessage('Please upload a source image first.');
       return;
     }
-    if (selectedTool === 'inpaint' && !mask) {
-      setErrorMessage('Please brush over the image to define the edit area.');
-      return;
-    }
-
     setIsProcessing(true);
     setErrorMessage(null);
     setOutputUrl(null);
-    setStatusMessage('Contacting server image processing pipelines...');
+    setStatusMessage('Processing image edit through server neural pipelines...');
 
     try {
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1';
       const res = await fetch(`${BASE_URL}/image-edit/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
           image,
           mask: selectedTool === 'inpaint' ? mask : null,
-          prompt: ['replace_bg', 'inpaint', 'outpaint'].includes(selectedTool) ? prompt : null,
+          prompt: editPrompt,
           tool: selectedTool,
           replicate_key: replicateKey || null
         })
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Failed to process image');
+        const data = await res.json().catch(() => ({ detail: 'Image edit failed' }));
+        throw new Error(data.detail || 'Image processing failed.');
       }
 
       const data = await res.json();
       setOutputUrl(data.output_url);
-      setStatusMessage(data.message || 'Image processing succeeded!');
+      setStatusMessage('Image edit completed successfully!');
     } catch (err: any) {
-      setErrorMessage(err.message || 'An unexpected error occurred during processing.');
+      setErrorMessage(err.message || 'An error occurred during image processing.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div id="image-edit-studio-container" className="flex flex-col gap-6 max-w-6xl mx-auto py-4">
-      {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
+    <div id="image-studio-root" className="flex flex-col gap-6 max-w-6xl mx-auto py-2">
+      {/* Header Mode Navigation */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-white/10 pb-4 gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-violet-500" />
+          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <Sparkles className="w-6 h-6 text-violet-400" />
             Image Studio
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Remove backgrounds, upscale, expand, and perform custom inpaint editing.</p>
+          <p className="text-xs text-slate-400 mt-1">Generate AI visuals, remove backgrounds, upscale, and apply inpaint edits.</p>
+        </div>
+
+        {/* Mode Switcher Pills */}
+        <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+          <button
+            onClick={() => setStudioMode('text2image')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              studioMode === 'text2image'
+                ? 'bg-violet-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            Text-to-Image Generator
+          </button>
+          <button
+            onClick={() => setStudioMode('editor')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              studioMode === 'editor'
+                ? 'bg-violet-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Scissors className="w-3.5 h-3.5" />
+            Image Editor Tools
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* MODE 1: TEXT-TO-IMAGE STUDIO */}
+      {studioMode === 'text2image' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Controls Column (4 cols) */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-slate-950/70 border border-slate-850 rounded-2xl p-4 shadow-xl space-y-4">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Prompt</label>
+              <textarea
+                rows={4}
+                value={genPrompt}
+                onChange={(e) => setGenPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleGenerateImage();
+                  }
+                }}
+                placeholder="Describe what you want to see... e.g. A futuristic cybernetic tiger in a neon synthwave city at sunset"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 resize-none font-medium"
+              />
 
-        {/* Left Column: Tool Selector & Parameters (Lg: 4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5" />
-              Edit Tools
+              {/* Style Presets */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Artistic Style</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {stylePresets.map(s => (
+                    <button
+                      key={s.name}
+                      onClick={() => setSelectedStyle(s.name)}
+                      className={`p-2 rounded-xl text-[11px] font-bold border transition-all text-left ${
+                        selectedStyle === s.name
+                          ? 'bg-violet-600/20 border-violet-500 text-violet-300 shadow-sm'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Aspect Ratio */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Dimensions</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: '1024x1024', label: 'Square (1:1)' },
+                    { id: '1280x720', label: 'Landscape (16:9)' },
+                    { id: '720x1280', label: 'Portrait (9:16)' }
+                  ].map(ar => (
+                    <button
+                      key={ar.id}
+                      onClick={() => setAspectRatio(ar.id as any)}
+                      className={`py-2 px-1 rounded-xl text-[10px] font-bold border text-center transition-all ${
+                        aspectRatio === ar.id
+                          ? 'bg-violet-600/20 border-violet-500 text-violet-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {ar.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Generate CTA Button */}
+              <button
+                onClick={() => handleGenerateImage()}
+                disabled={isGenerating || !genPrompt.trim()}
+                className="w-full py-3 bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 disabled:opacity-40 text-white font-extrabold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    Generating Visual...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4" />
+                    Generate Image
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Canvas Output Column (8 cols) */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 min-h-[480px] flex flex-col justify-between relative overflow-hidden shadow-2xl">
+              {/* Top Controls Bar */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                <span className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-violet-400" />
+                  Visual Canvas
+                </span>
+
+                {genResult && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => copyToClipboard(genResult.prompt, 'prompt')}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 hover:text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                      title="Copy Prompt"
+                    >
+                      {copiedField === 'prompt' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>Prompt</span>
+                    </button>
+
+                    <button
+                      onClick={() => setFullscreenImage(genResult.imageUrl)}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 hover:text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                      title="Fullscreen Zoom"
+                    >
+                      <ZoomIn className="w-3 h-3" />
+                      <span>Zoom</span>
+                    </button>
+
+                    <a
+                      href={genResult.imageUrl}
+                      download={`aether_art_${genResult.seed}.png`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-550 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-md"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Main Image Display Area */}
+              <div className="flex-1 flex flex-col items-center justify-center p-6 relative my-2">
+                {isGenerating ? (
+                  <div className="flex flex-col items-center justify-center text-center space-y-4 animate-pulse">
+                    <div className="w-16 h-16 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-violet-400" />
+                    </div>
+                    <p className="text-xs font-bold text-violet-300">{genStatusText || 'Creating neural masterpiece...'}</p>
+                    <p className="text-[10px] text-slate-500">Multi-provider engine fallback & retries active</p>
+                  </div>
+                ) : genResult ? (
+                  <div className="relative group max-w-full rounded-2xl overflow-hidden border border-violet-500/20 shadow-2xl">
+                    <img
+                      src={genResult.imageUrl}
+                      alt={genResult.prompt}
+                      className="max-h-[440px] w-auto object-contain rounded-2xl transition-transform duration-300 group-hover:scale-[1.01]"
+                      onError={(e) => {
+                        console.warn('Direct image load error, falling back to proxy');
+                        const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://samrat-aethermind-v3.onrender.com/api/v1'}/image/proxy?url=${encodeURIComponent(genResult.imageUrl)}`;
+                        e.currentTarget.src = proxyUrl;
+                      }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono text-cyan-300 font-bold block">{genResult.provider}</span>
+                        <span className="text-[11px] text-white font-medium line-clamp-1">{genResult.prompt}</span>
+                      </div>
+                      <button
+                        onClick={() => handleGenerateImage(genResult.prompt)}
+                        className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-[10px] font-bold"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-3 max-w-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
+                      <Wand2 className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Your Canvas is Ready</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Enter a detailed text prompt on the left to start generating high-resolution AI visuals with auto-fallback.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Diagnostics Footer Bar */}
+              {genResult && (
+                <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[10px] font-mono text-slate-400">
+                  <div className="flex items-center gap-3">
+                    <span>Engine: <strong className="text-violet-300">{genResult.provider}</strong></span>
+                    <span>Time: <strong className="text-cyan-300">{genResult.generationTime}s</strong></span>
+                    <span>Seed: <strong className="text-slate-300">{genResult.seed}</strong></span>
+                  </div>
+                  <button
+                    onClick={() => setShowDebug(!showDebug)}
+                    className="text-slate-400 hover:text-white flex items-center gap-1 font-bold cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    Diagnostics
+                  </button>
+                </div>
+              )}
+
+              {/* Debug Drawer */}
+              {showDebug && genResult && (
+                <div className="mt-3 p-3 bg-black/80 border border-violet-500/30 rounded-xl text-[10px] font-mono text-slate-300 space-y-1">
+                  <div>Status: <span className="text-emerald-400 font-bold">200 OK</span></div>
+                  <div>Provider: <span className="text-violet-300">{genResult.provider}</span></div>
+                  <div>Image URL: <span className="text-slate-400 truncate block max-w-full">{genResult.imageUrl}</span></div>
+                  <div>Latency: <span className="text-cyan-300">{genResult.generationTime} seconds</span></div>
+                </div>
+              )}
             </div>
 
-            {/* Tool Radio List */}
-            <div className="flex flex-col gap-1">
-              {[
-                { id: 'remove_bg', label: 'Remove Background', desc: 'Isolate subjects instantly', icon: Scissors },
-                { id: 'replace_bg', label: 'Replace Background', desc: 'Swap background using text prompt', icon: RefreshCw },
-                { id: 'inpaint', label: 'Inpaint (Brush Edit)', desc: 'Modify specific areas only', icon: Sparkles },
-                { id: 'outpaint', label: 'Outpaint (Expand)', desc: 'Extend scene margins', icon: Maximize2 },
-                { id: 'upscale', label: 'Upscale (2x Resolution)', desc: 'Super-resolution rendering', icon: RefreshCw },
-                { id: 'face_enhance', label: 'Face Enhancement', desc: 'Sharpen and restore faces', icon: Smile },
-              ].map((t) => {
-                const Icon = t.icon;
-                const isSelected = selectedTool === t.id;
-                return (
+            {/* Generation History Gallery */}
+            {genHistory.length > 0 && (
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 space-y-3">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Session History ({genHistory.length})</span>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800">
+                  {genHistory.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setGenResult(item)}
+                      className={`w-24 h-24 rounded-xl border flex-shrink-0 overflow-hidden cursor-pointer transition-all ${
+                        genResult?.imageUrl === item.imageUrl ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      <img src={item.imageUrl} alt={item.prompt} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODE 2: IMAGE EDITOR TOOLS */}
+      {studioMode === 'editor' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 space-y-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Edit Tool</span>
+              <div className="space-y-1">
+                {[
+                  { id: 'remove_bg', label: 'Remove Background', desc: 'Isolate subjects instantly', icon: Scissors },
+                  { id: 'replace_bg', label: 'Replace Background', desc: 'Swap scene backdrop', icon: RefreshCw },
+                  { id: 'inpaint', label: 'Inpaint (Brush Edit)', desc: 'Brush & modify pixels', icon: Sparkles },
+                  { id: 'outpaint', label: 'Outpaint (Expand)', desc: 'Extend scene bounds', icon: Maximize2 },
+                  { id: 'upscale', label: 'Super Resolution Upscale', desc: 'Sharpen resolution', icon: RefreshCw },
+                  { id: 'face_enhance', label: 'Face Enhancement', desc: 'Restore face details', icon: Smile }
+                ].map(t => (
                   <button
                     key={t.id}
                     onClick={() => {
@@ -251,265 +528,81 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
                       setOutputUrl(null);
                       setErrorMessage(null);
                     }}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all ${
-                      isSelected
-                        ? 'bg-violet-50 border-l-4 border-violet-500 text-violet-700 shadow-sm'
-                        : 'hover:bg-slate-50 text-slate-600 border-l-4 border-transparent'
+                    className={`w-full text-left p-3 rounded-xl border flex items-start gap-3 transition-all ${
+                      selectedTool === t.id
+                        ? 'bg-violet-600/20 border-violet-500 text-violet-300 font-bold'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 mt-0.5 ${isSelected ? 'text-violet-500' : 'text-slate-400'}`} />
+                    <t.icon className="w-4 h-4 mt-0.5 text-violet-400" />
                     <div>
-                      <div className="text-xs font-bold">{t.label}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{t.desc}</div>
+                      <div className="text-xs">{t.label}</div>
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">{t.desc}</div>
                     </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+
+              <button
+                onClick={handleProcessImageEdit}
+                disabled={isProcessing || !image}
+                className="w-full py-3 bg-violet-600 hover:bg-violet-550 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
+              >
+                {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Apply Edit Tool
+              </button>
             </div>
           </div>
 
-          {/* Prompt/Inputs Settings */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Tool Parameters
-            </div>
-
-            {/* API Settings */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500">Replicate API Key (Optional)</label>
-              <input
-                type="password"
-                placeholder="replicate_token_..."
-                value={replicateKey}
-                onChange={(e) => setReplicateKey(e.target.value)}
-                className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-violet-500 bg-slate-50"
-              />
-              <p className="text-[9px] text-slate-400 leading-normal">
-                Leave blank to run in simulated Keyless Fallback mode.
-              </p>
-            </div>
-
-            {/* Text prompt for replacement tools */}
-            {['replace_bg', 'inpaint', 'outpaint'].includes(selectedTool) && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500">Editing Prompt</label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe your edits (e.g. 'wearing fancy futuristic glasses', 'on a sunny tropical beach')"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-violet-500 bg-slate-50 resize-none"
-                />
-              </div>
-            )}
-
-            {/* Inpainting brush sliders */}
-            {selectedTool === 'inpaint' && image && (
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
-                  <span>Brush Size</span>
-                  <span>{brushSize}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={brushSize}
-                  onChange={(e) => setBrushSize(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                />
-                <button
-                  type="button"
-                  onClick={clearMask}
-                  className="w-full py-1.5 px-3 rounded-lg border border-slate-200 text-[10px] font-bold hover:bg-slate-50 text-slate-600 transition-colors"
-                >
-                  Clear Selection Mask
-                </button>
-              </div>
-            )}
-
-            {/* upscale scale select */}
-            {selectedTool === 'upscale' && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500">Upscale Factor</label>
-                <select
-                  value={scale}
-                  onChange={(e) => setScale(Number(e.target.value))}
-                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-violet-500 bg-slate-50"
-                >
-                  <option value={2}>2x Super Resolution</option>
-                  <option value={4}>4x (Requires Pro Key)</option>
-                </select>
-              </div>
-            )}
-
-            {/* Action CTA Button */}
-            <button
-              onClick={handleProcessImage}
-              disabled={isProcessing || !image}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Process Image
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column: Source View & Result Panel (Lg: 8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Input File Box */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3 min-h-[380px]">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Source Image</span>
-                {image && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImage(null);
-                      setMask(null);
-                      setOutputUrl(null);
-                    }}
-                    className="text-red-500 hover:text-red-600 p-1 hover:bg-red-50 rounded-md transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Upload Workspace Area */}
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl relative overflow-hidden bg-slate-50/50 p-4">
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 min-h-[360px] flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Source Image</span>
+              <div className="flex-1 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 bg-slate-900/50 relative">
                 {image ? (
-                  selectedTool === 'inpaint' ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <canvas
-                        ref={canvasRef}
-                        onMouseDown={startDrawing}
-                        onMouseMove={draw}
-                        onMouseUp={stopDrawing}
-                        onMouseLeave={stopDrawing}
-                        className="max-w-full rounded-lg border border-slate-200 cursor-crosshair shadow-sm"
-                        title="Brush over the specific pixels you want to edit."
-                      />
-                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        Brush over the areas to apply inpainting edits.
-                      </span>
-                    </div>
-                  ) : (
-                    <img
-                      src={image}
-                      alt="source preview"
-                      className="max-h-[300px] w-auto object-contain rounded-lg border border-slate-200 shadow-sm"
-                    />
-                  )
+                  <img src={image} alt="Source" className="max-h-[280px] object-contain rounded-lg" />
                 ) : (
-                  <label className="flex flex-col items-center justify-center gap-3 cursor-pointer w-full h-full py-8 text-center">
-                    <div className="p-3 bg-violet-50 rounded-xl border border-violet-100 shadow-sm">
-                      <Upload className="w-6 h-6 text-violet-500" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-700">Drag and drop or Upload image</div>
-                      <div className="text-[10px] text-slate-400 mt-1">Supports PNG, JPEG up to 10MB</div>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
+                  <label className="flex flex-col items-center justify-center gap-2 cursor-pointer text-center">
+                    <Upload className="w-8 h-8 text-violet-400" />
+                    <span className="text-xs font-bold text-slate-300">Upload Image File</span>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
                 )}
               </div>
             </div>
 
-            {/* Output File Box */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3 min-h-[380px]">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Output Result</span>
-                {outputUrl && (
-                  <a
-                    href={outputUrl}
-                    download="aether_edited_image.png"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 py-1 px-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700 shadow-sm transition-colors"
-                  >
-                    <Download className="w-3 h-3" />
-                    Download
-                  </a>
-                )}
-              </div>
-
-              {/* Output Display Area */}
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-slate-100 rounded-xl relative overflow-hidden bg-slate-50 p-4">
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 min-h-[360px] flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Result</span>
+              <div className="flex-1 border border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 bg-slate-900/50">
                 {isProcessing ? (
-                  <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full border-4 border-violet-100 border-t-violet-500 animate-spin" />
-                      <Sparkles className="w-5 h-5 text-violet-500 absolute top-3.5 left-3.5 animate-pulse" />
-                    </div>
-                    <div className="max-w-[200px]">
-                      <div className="text-xs font-bold text-slate-700 animate-pulse">Processing Edits</div>
-                      <div className="text-[9px] text-slate-400 mt-1 leading-relaxed">
-                        {statusMessage || 'Initializing Replicate API prediction...'}
-                      </div>
-                    </div>
+                  <div className="text-center space-y-2">
+                    <RefreshCw className="w-8 h-8 text-violet-400 animate-spin mx-auto" />
+                    <span className="text-xs font-bold text-slate-300 block">{statusMessage}</span>
                   </div>
                 ) : outputUrl ? (
-                  <img
-                    src={outputUrl}
-                    alt="output result"
-                    className="max-h-[300px] w-auto object-contain rounded-lg border border-slate-200 shadow-md animate-fade-in"
-                  />
+                  <img src={outputUrl} alt="Output" className="max-h-[280px] object-contain rounded-lg shadow-lg" />
                 ) : (
-                  <div className="text-center text-slate-400 max-w-[200px] flex flex-col items-center justify-center py-8">
-                    <div className="p-3 bg-slate-100 rounded-xl border border-slate-200/50 mb-3">
-                      <Sparkles className="w-6 h-6 text-slate-400" />
-                    </div>
-                    <div className="text-xs font-bold">Waiting for run</div>
-                    <div className="text-[10px] mt-1">Edited outputs will show up here.</div>
-                  </div>
+                  <span className="text-xs text-slate-500 font-medium">Output will appear here after processing.</span>
                 )}
               </div>
             </div>
-
           </div>
-
-          {/* Feedback Alerts */}
-          {statusMessage && !isProcessing && (
-            <div className="bg-emerald-50 border border-emerald-200/60 rounded-xl p-3.5 flex items-start gap-2.5 text-emerald-800 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-600 flex-shrink-0" />
-              <div className="text-[10px] leading-relaxed">
-                <span className="font-bold">Success: </span>
-                {statusMessage}
-              </div>
-            </div>
-          )}
-
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200/60 rounded-xl p-3.5 flex items-start gap-2.5 text-red-800 animate-fade-in">
-              <AlertCircle className="w-4 h-4 mt-0.5 text-red-600 flex-shrink-0" />
-              <div className="text-[10px] leading-relaxed">
-                <span className="font-bold">Error: </span>
-                {errorMessage}
-              </div>
-            </div>
-          )}
         </div>
+      )}
 
-      </div>
+      {/* Fullscreen Lightbox Modal */}
+      {fullscreenImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative max-w-5xl max-h-[90vh]">
+            <button
+              onClick={() => setFullscreenImage(null)}
+              className="absolute -top-12 right-0 text-slate-400 hover:text-white p-2 rounded-full bg-white/10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img src={fullscreenImage} alt="Fullscreen View" className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

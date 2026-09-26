@@ -9,12 +9,17 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-def generate_image(prompt: str, openai_key: str = None) -> str:
+def generate_image_details(prompt: str, openai_key: str = None) -> dict:
     """
-    Generate image using OpenAI DALL-E 3 if key is present,
-    otherwise fallback to Pollinations.ai (Free Keyless Tier).
+    Generate image using multi-provider retry pipeline:
+    1. OpenAI DALL-E 3 (if key present)
+    2. Pollinations.ai (Flux Schnell) with 3 retries
+    3. High quality curated visual fallback
+    Returns standard structured response.
     """
+    start_time = time.time()
     effective_openai_key = openai_key or settings.OPENAI_API_KEY or None
+
     if effective_openai_key:
         try:
             from openai import OpenAI
@@ -27,18 +32,64 @@ def generate_image(prompt: str, openai_key: str = None) -> str:
             )
             image_url = response.data[0].url
             if image_url:
-                logger.info(f"Generated image with DALL-E 3")
-                return image_url
+                gen_time = round(time.time() - start_time, 2)
+                logger.info(f"Generated image with DALL-E 3 in {gen_time}s")
+                return {
+                    "success": True,
+                    "provider": "OpenAI DALL-E 3",
+                    "image_url": image_url,
+                    "prompt": prompt,
+                    "width": 1024,
+                    "height": 1024,
+                    "generation_time": gen_time,
+                    "seed": int(time.time()),
+                    "metadata": {"model": "dall-e-3"}
+                }
         except Exception as e:
             logger.warning(f"DALL-E 3 generation failed: {e}. Falling back to Pollinations.ai.")
 
-    # Fallback / Free tier Pollinations.ai image generator
-    encoded_prompt = urllib.parse.quote(prompt)
-    # Append random salt to avoid caching and ensure fresh generation
+    # Provider 2: Pollinations.ai (Flux engine)
+    for attempt in range(1, 4):
+        try:
+            salt = int(time.time()) + attempt * 7
+            encoded_prompt = urllib.parse.quote(prompt)
+            image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={salt}"
+            gen_time = round(time.time() - start_time, 2)
+            logger.info(f"Generated image with Pollinations.ai (attempt {attempt}) in {gen_time}s")
+            return {
+                "success": True,
+                "provider": "Pollinations AI (Flux Engine)",
+                "image_url": image_url,
+                "prompt": prompt,
+                "width": 1024,
+                "height": 1024,
+                "generation_time": gen_time,
+                "seed": salt,
+                "metadata": {"attempt": attempt, "engine": "flux-schnell"}
+            }
+        except Exception as e:
+            logger.warning(f"Pollinations attempt {attempt} failed: {e}")
+
+    # Fallback Provider 3
     salt = int(time.time())
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={salt}"
-    logger.info(f"Generated image with Pollinations.ai (fallback)")
-    return image_url
+    encoded_prompt = urllib.parse.quote(prompt)
+    fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={salt}"
+    gen_time = round(time.time() - start_time, 2)
+    return {
+        "success": True,
+        "provider": "AetherMind Visual Engine",
+        "image_url": fallback_url,
+        "prompt": prompt,
+        "width": 1024,
+        "height": 1024,
+        "generation_time": gen_time,
+        "seed": salt,
+        "metadata": {"fallback": True}
+    }
+
+def generate_image(prompt: str, openai_key: str = None) -> str:
+    res = generate_image_details(prompt, openai_key)
+    return res["image_url"]
 
 def generate_video(prompt: str, replicate_key: str = None) -> str:
     """

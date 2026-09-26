@@ -15,6 +15,7 @@ import { DevicePreviewMenu, DeviceSimulatorWrapper, DEVICE_PRESETS, DevicePreset
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
 import { useAuth } from '@/context/AuthContext';
+import { BRANDING_CONFIG } from '@/config/branding';
 import {
   MessageSquare,
   Mic,
@@ -479,13 +480,15 @@ export default function Home() {
   }, [messages, isStreaming, activeScreen]);
 
   // Speaking state for greeting
+  const [voiceGreeting, setVoiceGreeting] = useState(() => BRANDING_CONFIG.defaultGreeting);
   const greetingSpokenRef = React.useRef(false);
-  const speakGreeting = (force = false) => {
+  const speakGreeting = (textToSpeak?: string | boolean) => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      if (greetingSpokenRef.current && !force) return;
+      const isForce = typeof textToSpeak === 'boolean' ? textToSpeak : false;
+      if (greetingSpokenRef.current && !isForce && typeof textToSpeak !== 'string') return;
       greetingSpokenRef.current = true;
 
-      const text = "Hi! I am Echo, your personal assistant.";
+      const text = typeof textToSpeak === 'string' ? textToSpeak : (voiceGreeting || BRANDING_CONFIG.defaultGreeting);
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
@@ -498,8 +501,8 @@ export default function Home() {
         v.name.toLowerCase().includes('united states')
       );
       if (usVoice) utterance.voice = usVoice;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
+      utterance.rate = voiceSettings.speed || 1.0;
+      utterance.pitch = voiceSettings.pitch || 1.0;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -959,8 +962,9 @@ export default function Home() {
 
                 {/* Speak greeting popover bubble */}
                 <div className="max-w-xs p-4 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md text-[11px] leading-relaxed text-slate-300">
-                  <p className="font-semibold text-white">👋 Hello! I am AetherMind.</p>
-                  <p className="mt-1 text-slate-400">Click me to trigger security voice greeting, or authenticate on the right side to start.</p>
+                  <p className="font-semibold text-white">{BRANDING_CONFIG.welcomeTitle}</p>
+                  <p className="mt-1 font-medium text-slate-200">{BRANDING_CONFIG.welcomeSubtitle}</p>
+                  <p className="mt-1.5 text-slate-400 text-[10px]">{BRANDING_CONFIG.welcomeCallToAction}</p>
                 </div>
               </div>
 
@@ -1818,7 +1822,7 @@ export default function Home() {
             <div className={`flex items-center justify-between p-5 border-b flex-shrink-0 ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
               <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 <Settings className="w-4 h-4 text-violet-400" />
-                Echo Mind Settings
+                {BRANDING_CONFIG.assistantName} Settings
               </h3>
               <button
                 onClick={() => setIsSettingsOpen(false)}
@@ -2212,6 +2216,33 @@ export default function Home() {
                 {/* TAB: VOICE */}
                 {activeSettingsTab === 'voice' && (
                   <div className="space-y-4">
+                    {/* Assistant Name & Test Voice */}
+                    <div className="p-4 border rounded-2xl flex items-center justify-between gap-3 bg-violet-600/5 border-violet-500/20">
+                      <div>
+                        <label className={`block text-[10px] uppercase font-bold text-violet-400`}>Assistant Name</label>
+                        <span className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{BRANDING_CONFIG.assistantName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => speakGreeting(voiceGreeting)}
+                        className="px-3 py-1.5 bg-violet-600 hover:bg-violet-550 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Mic className="w-3.5 h-3.5" />
+                        Test Voice
+                      </button>
+                    </div>
+
+                    {/* Editable Greeting */}
+                    <div>
+                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Greeting Message</label>
+                      <input
+                        type="text"
+                        value={voiceGreeting}
+                        onChange={(e) => setVoiceGreeting(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Accent (English)</label>
@@ -2236,17 +2267,78 @@ export default function Home() {
                         </select>
                       </div>
                     </div>
-                    <div>
-                      <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Wake Word</label>
-                      <select
-                        value={voiceSettings.wakeWord}
-                        onChange={(e) => setVoiceSettings({ wakeWord: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-855 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                      >
-                        <option value="">Disabled (None)</option>
-                        {['Samrat', 'Aether', 'Echo', 'Friday'].map(w => <option key={w} value={w}>{w}</option>)}
-                      </select>
+
+                    {/* Enable Wake Word Toggle & Selection */}
+                    <div className={`p-4 border rounded-2xl space-y-3 ${isDark ? 'bg-slate-950 border-slate-900' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Enable Wake Word</label>
+                          <span className="text-[10px] text-slate-500 block mt-0.5">If OFF, Live Assistant listens directly while session is active</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVoiceSettings({ wakeWordEnabled: !voiceSettings.wakeWordEnabled })}
+                          className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors flex-shrink-0 ${voiceSettings.wakeWordEnabled ? 'bg-violet-600' : 'bg-slate-800'}`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out ${voiceSettings.wakeWordEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      {voiceSettings.wakeWordEnabled && (
+                        <div className="space-y-3 pt-2 border-t border-white/5">
+                          <div>
+                            <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Wake Word Phrase</label>
+                            <select
+                              value={voiceSettings.wakeWord}
+                              onChange={(e) => setVoiceSettings({ wakeWord: e.target.value })}
+                              className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                            >
+                              {['AetherMind', 'Hey AetherMind', 'Hi AetherMind', 'Computer', 'Jarvis', 'Custom'].map(w => <option key={w} value={w}>{w}</option>)}
+                            </select>
+                          </div>
+
+                          {voiceSettings.wakeWord === 'Custom' && (
+                            <div>
+                              <label className={`block text-[10px] uppercase font-bold mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Custom Wake Word</label>
+                              <input
+                                type="text"
+                                value={voiceSettings.customWakeWord}
+                                onChange={(e) => setVoiceSettings({ customWakeWord: e.target.value })}
+                                placeholder="Enter custom wake phrase..."
+                                className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 font-semibold ${isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Microphone Audio Processing Settings */}
+                    <div className={`p-4 border rounded-2xl space-y-3 ${isDark ? 'bg-slate-950 border-slate-900' : 'bg-slate-50 border-slate-200'}`}>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Microphone Audio Processing</span>
+                      <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setVoiceSettings({ noiseSuppression: !voiceSettings.noiseSuppression })}
+                          className={`p-2 rounded-xl border text-center font-bold transition-all ${voiceSettings.noiseSuppression ? 'bg-violet-600/20 border-violet-500 text-violet-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}
+                        >
+                          Noise Suppression
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVoiceSettings({ echoCancellation: !voiceSettings.echoCancellation })}
+                          className={`p-2 rounded-xl border text-center font-bold transition-all ${voiceSettings.echoCancellation ? 'bg-violet-600/20 border-violet-500 text-violet-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}
+                        >
+                          Echo Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVoiceSettings({ autoGainControl: !voiceSettings.autoGainControl })}
+                          className={`p-2 rounded-xl border text-center font-bold transition-all ${voiceSettings.autoGainControl ? 'bg-violet-600/20 border-violet-500 text-violet-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}
+                        >
+                          Auto Gain
+                        </button>
+                      </div>
                     </div>
                     <div className={`space-y-3 pt-2 border-t ${isDark ? 'border-slate-900' : 'border-slate-150'}`}>
                       <div>

@@ -22,7 +22,7 @@
 ## ✨ Key Features
 
 - 🤖 **Multi-Engine AI Routing**: Dynamically switch between Google Gemini, OpenAI GPT-4, Anthropic Claude, and DeepSeek.
-- 🎙️ **Real-Time Voice Assistant ("Echo")**: Includes interactive canvas voice visualizers (Vortex Visualizer), speech recognition, and low-latency speech synthesis.
+- 🎙️ **Real-Time Voice Assistant ("AetherMind")**: Includes interactive canvas voice visualizers (Vortex Visualizer), speech recognition, and low-latency speech synthesis.
 - 📄 **RAG Document Chat**: Upload PDF documents, automatically parse text embeddings, and perform question-answering with citation context.
 - 🎨 **Image Editing & Generation Studio**: Multi-modal image generation and canvas manipulation powered by AI models.
 - 🔐 **Multi-Authentication System**:

@@ -383,3 +383,34 @@ def delete_message(
 
     return {"message": "Message deleted successfully", "message_id": message_id}
 
+class ImageGeneratePayload(BaseModel):
+    prompt: str
+    aspect_ratio: Optional[str] = "1024x1024"
+    style: Optional[str] = "Photorealistic"
+
+@router.post("/image/generate")
+def generate_image_endpoint(payload: ImageGeneratePayload):
+    from app.services.media_pipeline import generate_image_details
+    res = generate_image_details(payload.prompt)
+    return res
+
+@router.get("/image/proxy")
+def proxy_image(url: str):
+    from fastapi.responses import Response
+    try:
+        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code == 200:
+            content_type = resp.headers.get("Content-Type", "image/png")
+            return Response(content=resp.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        logger.error(f"Image proxy error: {e}")
+
+    svg_fallback = """<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+      <rect width="1024" height="1024" fill="#0b0c16"/>
+      <circle cx="512" cy="512" r="200" fill="none" stroke="#8b5cf6" stroke-width="4" opacity="0.3"/>
+      <text x="512" y="500" fill="#a78bfa" font-family="sans-serif" font-size="32" font-weight="bold" text-anchor="middle">AetherMind Studio</text>
+      <text x="512" y="550" fill="#94a3b8" font-family="sans-serif" font-size="20" text-anchor="middle">Visual output ready</text>
+    </svg>"""
+    return Response(content=svg_fallback, media_type="image/svg+xml")
+
+

@@ -109,20 +109,62 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
   }, []); // Run only on mount
 
 
+  const [audioLevel, setAudioLevel] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+
   const startListening = async () => {
     if (!speechSupported || !recognitionRef.current) {
       alert('Speech recognition is not supported in this browser. Please try Google Chrome.');
       return;
     }
-    // Stop speaking if active
+    // Stop speaking if active (interruption)
     stopSpeaking();
 
-    // Request permission explicitly on phone/desktop browsers to trigger user prompt
     try {
       if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Release stream tracks immediately after permission check
-        stream.getTracks().forEach(track => track.stop());
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: voiceSettings.echoCancellation !== false,
+            noiseSuppression: voiceSettings.noiseSuppression !== false,
+            autoGainControl: voiceSettings.autoGainControl !== false,
+          }
+        });
+
+        // Setup audio level analyzer
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          source.connect(analyser);
+
+          audioContextRef.current = audioCtx;
+          analyserRef.current = analyser;
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const updateVolume = () => {
+            if (analyserRef.current) {
+              analyserRef.current.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+              }
+              const average = sum / dataArray.length;
+              setAudioLevel(Math.min(100, Math.round((average / 128) * 100)));
+              animFrameRef.current = requestAnimationFrame(updateVolume);
+            }
+          };
+          updateVolume();
+        } catch (e) {
+          console.warn('Audio analyzer setup error:', e);
+        }
+
+        // Release stream tracks after setup or on stop
+        setTimeout(() => {
+          stream.getTracks().forEach(track => track.stop());
+        }, 15000);
       }
     } catch (e: any) {
       console.warn('Microphone permission request rejected:', e);
@@ -136,7 +178,6 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
       recognitionRef.current.start();
     } catch (e: any) {
       console.warn(e);
-      // If recognition is already starting or active, ignore and sync state
       if (e.name === 'InvalidStateError' || (e.message && e.message.includes('already started'))) {
         setIsListening(true);
         return;
@@ -245,6 +286,7 @@ export const useVoice = ({ onTranscript, onResponseEnd, onError }: UseVoiceOptio
   return {
     isListening,
     isSpeaking,
+    audioLevel,
     speechSupported,
     startListening,
     stopListening,

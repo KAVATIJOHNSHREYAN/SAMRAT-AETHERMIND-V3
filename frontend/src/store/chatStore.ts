@@ -60,9 +60,16 @@ export interface VoiceSettings {
   pitch: number;
   continuousMode: boolean;
   wakeWord: string;
+  customWakeWord: string;
   wakeWordSensitivity: number;
   activationSoundEnabled: boolean;
   wakeWordEnabled: boolean;
+  noiseSuppression: boolean;
+  echoCancellation: boolean;
+  autoGainControl: boolean;
+  autoReadResponses: boolean;
+  handsFreeMode: boolean;
+  pushToTalkMode: boolean;
 }
 
 interface ChatStoreState {
@@ -195,10 +202,17 @@ export const useChatStore = create<ChatStoreState>((set) => ({
     speed: typeof window !== 'undefined' ? parseFloat(localStorage.getItem('aether_voice_speed') || '1.0') : 1.0,
     pitch: typeof window !== 'undefined' ? parseFloat(localStorage.getItem('aether_voice_pitch') || '1.0') : 1.0,
     continuousMode: typeof window !== 'undefined' ? localStorage.getItem('aether_continuous_mode') === 'true' : false,
-    wakeWord: typeof window !== 'undefined' ? localStorage.getItem('aether_wake_word') || 'Samrat' : 'Samrat',
+    wakeWord: typeof window !== 'undefined' ? localStorage.getItem('aether_wake_word') || 'AetherMind' : 'AetherMind',
+    customWakeWord: typeof window !== 'undefined' ? localStorage.getItem('aether_custom_wake_word') || '' : '',
     wakeWordSensitivity: typeof window !== 'undefined' ? parseFloat(localStorage.getItem('aether_voice_sensitivity') || '0.5') : 0.5,
     activationSoundEnabled: typeof window !== 'undefined' ? localStorage.getItem('aether_voice_activation_sound') !== 'false' : true,
-    wakeWordEnabled: typeof window !== 'undefined' ? localStorage.getItem('aether_wake_word_enabled') !== 'false' : true,
+    wakeWordEnabled: typeof window !== 'undefined' ? localStorage.getItem('aether_wake_word_enabled') === 'true' : false,
+    noiseSuppression: typeof window !== 'undefined' ? localStorage.getItem('aether_noise_suppression') !== 'false' : true,
+    echoCancellation: typeof window !== 'undefined' ? localStorage.getItem('aether_echo_cancellation') !== 'false' : true,
+    autoGainControl: typeof window !== 'undefined' ? localStorage.getItem('aether_auto_gain_control') !== 'false' : true,
+    autoReadResponses: typeof window !== 'undefined' ? localStorage.getItem('aether_auto_read_responses') !== 'false' : true,
+    handsFreeMode: typeof window !== 'undefined' ? localStorage.getItem('aether_hands_free') === 'true' : false,
+    pushToTalkMode: typeof window !== 'undefined' ? localStorage.getItem('aether_push_to_talk') === 'true' : false,
   },
   hiddenChatIds: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aether_hidden_chats') || '[]') : [],
   lockChats: typeof window !== 'undefined' ? localStorage.getItem('aether_lock_chats') !== 'false' : true,
