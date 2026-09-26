@@ -394,14 +394,49 @@ def generate_image_endpoint(payload: ImageGeneratePayload):
     res = generate_image_details(payload.prompt)
     return res
 
+def apply_aethermind_watermark(image_bytes: bytes) -> bytes:
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        w, h = img.size
+
+        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        # Draw dark badge in bottom right corner to hide pollinations.ai logo
+        badge_w = 140
+        badge_h = 32
+        padding = 16
+        x1 = w - badge_w - padding
+        y1 = h - badge_h - padding
+        x2 = w - padding
+        y2 = h - padding
+
+        draw.rounded_rectangle([x1, y1, x2, y2], radius=8, fill=(11, 12, 22, 245), outline=(139, 92, 246, 180), width=1)
+        try:
+            font = ImageFont.truetype("arial.ttf", 13)
+        except Exception:
+            font = ImageFont.load_default()
+
+        draw.text((x1 + 16, y1 + 7), "aethermind.ai", fill=(216, 180, 254, 255), font=font)
+
+        watermarked = Image.alpha_composite(img, overlay)
+        out = io.BytesIO()
+        watermarked.save(out, format="PNG")
+        return out.getvalue()
+    except Exception as e:
+        logger.warning(f"Watermark overlay error: {e}")
+        return image_bytes
+
 @router.get("/image/proxy")
 def proxy_image(url: str):
     from fastapi.responses import Response
     try:
-        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        resp = requests.get(url, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
         if resp.status_code == 200:
-            content_type = resp.headers.get("Content-Type", "image/png")
-            return Response(content=resp.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+            watermarked_bytes = apply_aethermind_watermark(resp.content)
+            return Response(content=watermarked_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
     except Exception as e:
         logger.error(f"Image proxy error: {e}")
 
@@ -410,7 +445,10 @@ def proxy_image(url: str):
       <circle cx="512" cy="512" r="200" fill="none" stroke="#8b5cf6" stroke-width="4" opacity="0.3"/>
       <text x="512" y="500" fill="#a78bfa" font-family="sans-serif" font-size="32" font-weight="bold" text-anchor="middle">AetherMind Studio</text>
       <text x="512" y="550" fill="#94a3b8" font-family="sans-serif" font-size="20" text-anchor="middle">Visual output ready</text>
+      <rect x="850" y="970" width="140" height="32" rx="8" fill="#0b0c16" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="920" y="991" fill="#d8b4fe" font-family="sans-serif" font-size="13" text-anchor="middle">aethermind.ai</text>
     </svg>"""
     return Response(content=svg_fallback, media_type="image/svg+xml")
+
 
 

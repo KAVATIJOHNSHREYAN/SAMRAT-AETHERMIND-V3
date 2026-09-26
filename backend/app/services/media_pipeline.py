@@ -48,17 +48,23 @@ def generate_image_details(prompt: str, openai_key: str = None) -> dict:
         except Exception as e:
             logger.warning(f"DALL-E 3 generation failed: {e}. Falling back to Pollinations.ai.")
 
+    def wrap_proxy_url(raw_url: str) -> str:
+        if not raw_url:
+            return raw_url
+        return f"https://samrat-aethermind-v3.onrender.com/api/v1/image/proxy?url={urllib.parse.quote(raw_url)}"
+
     # Provider 2: Pollinations.ai (Flux engine)
     for attempt in range(1, 4):
         try:
             salt = int(time.time()) + attempt * 7
             encoded_prompt = urllib.parse.quote(prompt)
-            image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={salt}"
+            raw_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&logo=false&nofeed=true&seed={salt}"
+            image_url = wrap_proxy_url(raw_url)
             gen_time = round(time.time() - start_time, 2)
             logger.info(f"Generated image with Pollinations.ai (attempt {attempt}) in {gen_time}s")
             return {
                 "success": True,
-                "provider": "Pollinations AI (Flux Engine)",
+                "provider": "AetherMind Flux Engine",
                 "image_url": image_url,
                 "prompt": prompt,
                 "width": 1024,
@@ -73,7 +79,8 @@ def generate_image_details(prompt: str, openai_key: str = None) -> dict:
     # Fallback Provider 3
     salt = int(time.time())
     encoded_prompt = urllib.parse.quote(prompt)
-    fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={salt}"
+    raw_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&logo=false&nofeed=true&seed={salt}"
+    fallback_url = wrap_proxy_url(raw_url)
     gen_time = round(time.time() - start_time, 2)
     return {
         "success": True,

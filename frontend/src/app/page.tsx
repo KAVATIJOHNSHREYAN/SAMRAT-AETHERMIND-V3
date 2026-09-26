@@ -204,14 +204,25 @@ export default function Home() {
     }
     return 'splash';
   });
-  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>('chat');
+  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('aether_workspace_tab') as any) || 'chat';
+    }
+    return 'chat';
+  });
 
-  // Save active screen to localStorage whenever screen changes
+  // Save active screen and workspace tab to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('aether_active_screen', activeScreen);
     }
   }, [activeScreen]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aether_workspace_tab', workspaceTab);
+    }
+  }, [workspaceTab]);
 
   // Device Simulation and Modal state
   const [selectedDevicePreset, setSelectedDevicePreset] = useState<DevicePreset>(DEVICE_PRESETS[0]);
@@ -523,10 +534,21 @@ export default function Home() {
     }
   };
 
-  // Chat window inputs
-  const [chatInput, setChatInput] = useState('');
+  // Chat window inputs with Draft Persistence
+  const [chatInput, setChatInput] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('aether_chat_input_draft') || '';
+    }
+    return '';
+  });
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [voiceReplyText, setVoiceReplyText] = useState('Welcome! Click the microphone below to talk.');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aether_chat_input_draft', chatInput);
+    }
+  }, [chatInput]);
 
   // Prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -609,6 +631,15 @@ export default function Home() {
     try {
       const data = await apiService.getChats(activeToken);
       setChats(data);
+
+      if (typeof window !== 'undefined') {
+        const savedChatId = localStorage.getItem('aether_active_chat_id');
+        if (savedChatId && data.some((c: any) => c.id === savedChatId)) {
+          selectChat(savedChatId);
+        } else if (data.length > 0 && !activeChatId) {
+          selectChat(data[0].id);
+        }
+      }
     } catch (err: any) {
       console.error('Failed to load chats:', err);
       if (err?.status === 401 || err?.message?.includes('401')) {
@@ -733,6 +764,18 @@ export default function Home() {
       console.error(err);
     }
   };
+
+  // Keyboard Shortcuts (Ctrl + Shift + O for New Chat)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
+        e.preventDefault();
+        handleCreateChat('general');
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [chats]);
 
   const handleSendTextMessage = async (e: React.FormEvent) => {
     e.preventDefault();

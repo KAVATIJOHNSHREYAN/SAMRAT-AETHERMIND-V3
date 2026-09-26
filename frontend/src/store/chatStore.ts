@@ -120,7 +120,7 @@ interface ChatStoreState {
 
 export const useChatStore = create<ChatStoreState>((set) => ({
   chats: [],
-  activeChatId: null,
+  activeChatId: typeof window !== 'undefined' ? localStorage.getItem('aether_active_chat_id') : null,
   messages: [],
   toasts: [],
   isLoadingChats: false,
@@ -218,7 +218,16 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   lockChats: typeof window !== 'undefined' ? localStorage.getItem('aether_lock_chats') !== 'false' : true,
 
   setChats: (chats) => set({ chats }),
-  setActiveChatId: (id) => set({ activeChatId: id }),
+  setActiveChatId: (id) => {
+    if (typeof window !== 'undefined') {
+      if (id) {
+        localStorage.setItem('aether_active_chat_id', id);
+      } else {
+        localStorage.removeItem('aether_active_chat_id');
+      }
+    }
+    set({ activeChatId: id });
+  },
   setMessages: (messages) => set({ messages }),
   setIsLoadingChats: (val) => set({ isLoadingChats: val }),
   setIsLoadingMessages: (val) => set({ isLoadingMessages: val }),
