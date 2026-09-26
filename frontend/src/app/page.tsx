@@ -9,6 +9,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
 import { DocumentChat } from '@/components/chat/DocumentChat';
 import ImageEditStudio from '@/components/ImageEditStudio';
+import AudioVoiceStudio from '@/components/AudioVoiceStudio';
 import { SecurityDashboard } from '@/components/SecurityDashboard';
 import { AIProviderSettings } from '@/components/AIProviderSettings';
 import { DevicePreviewMenu, DeviceSimulatorWrapper, DEVICE_PRESETS, DevicePreset } from '@/components/DevicePreviewSimulator';
@@ -19,6 +20,7 @@ import { BRANDING_CONFIG } from '@/config/branding';
 import {
   MessageSquare,
   Mic,
+  Volume2,
   ArrowRight,
   ChevronRight,
   Bell,
@@ -230,7 +232,7 @@ export default function Home() {
     }
     return 'splash';
   });
-  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit'>(() => {
+  const [workspaceTab, setWorkspaceTab] = useState<'chat' | 'docChat' | 'imageEdit' | 'audioVoice'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('aether_workspace_tab') as any) || 'chat';
     }
@@ -1339,16 +1341,17 @@ export default function Home() {
             </div>
 
             {/* Segmented Workspace Toggle Control */}
-            <div className={`flex items-center ${isDark ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-slate-100/80 border-slate-200'} p-1 rounded-full border shadow-inner`}>
+            <div className={`flex items-center ${isDark ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-slate-100/80 border-slate-200'} p-1 rounded-full border shadow-inner overflow-x-auto`}>
               {[
                 { id: 'chat', label: 'Standard Chat', icon: MessageSquare },
                 { id: 'docChat', label: 'DocMind AI', icon: FileText },
-                { id: 'imageEdit', label: 'Image Studio', icon: Image }
+                { id: 'imageEdit', label: 'Image Studio', icon: Image },
+                { id: 'audioVoice', label: 'Audio & Voice Studio', icon: Volume2 }
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setWorkspaceTab(tab.id as 'chat' | 'docChat' | 'imageEdit')}
-                  className={`flex items-center gap-1.5 px-4.5 py-2 rounded-full text-[11px] font-bold transition-all cursor-pointer ${workspaceTab === tab.id
+                  onClick={() => setWorkspaceTab(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${workspaceTab === tab.id
                     ? isDark
                       ? 'bg-violet-600/20 text-violet-400 border border-violet-500/40 shadow-[0_0_15px_rgba(124,58,237,0.25)]'
                       : 'bg-white text-[#0EA5E9] shadow-sm border border-slate-200/50'
@@ -1357,6 +1360,7 @@ export default function Home() {
                       : 'text-slate-505 hover:text-[#0EA5E9]'
                     }`}
                 >
+                  <tab.icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                 </button>
               ))}
@@ -1545,6 +1549,13 @@ export default function Home() {
               {workspaceTab === 'imageEdit' && (
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
                   <ImageEditStudio token={token || ''} />
+                </div>
+              )}
+
+              {/* Audio & Voice Neural Studio Panel */}
+              {workspaceTab === 'audioVoice' && (
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
+                  <AudioVoiceStudio token={token || ''} />
                 </div>
               )}
 
