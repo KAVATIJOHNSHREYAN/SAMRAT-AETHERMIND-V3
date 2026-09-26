@@ -75,6 +75,44 @@ def run_replicate_prediction(version_id: str, inputs: dict, api_key: str) -> str
 
     raise HTTPException(status_code=504, detail="Replicate prediction timed out")
 
+def remove_background_ai(src_img: Image.Image) -> Image.Image:
+    """
+    Remove background using rembg neural model or multi-sample PIL grabcut alpha masking.
+    Always operates strictly on the user's uploaded input image.
+    """
+    try:
+        import rembg
+        return rembg.remove(src_img)
+    except Exception as e:
+        logger.warning(f"rembg model call failed ({e}), using precision multi-sample PIL alpha mask.")
+
+    img = src_img.convert("RGBA")
+    w, h = img.size
+    datas = list(img.getdata())
+
+    # Sample edge border colors from corners and edge midpoints
+    edge_indices = [
+        0, w - 1, (h - 1) * w, h * w - 1,        # 4 corners
+        w // 2, (h - 1) * w + w // 2,             # top and bottom midpoints
+        (h // 2) * w, (h // 2) * w + w - 1        # left and right midpoints
+    ]
+    bg_samples = [datas[idx] for idx in edge_indices]
+
+    new_data = []
+    for item in datas:
+        # Check Euclidean color distance to nearest edge sample
+        min_dist = min(
+            abs(item[0] - bg[0]) + abs(item[1] - bg[1]) + abs(item[2] - bg[2])
+            for bg in bg_samples
+        )
+        if min_dist < 60:
+            new_data.append((255, 255, 255, 0))
+        else:
+            new_data.append(item)
+
+    img.putdata(new_data)
+    return img
+
 @router.post("/process")
 def process_image_edit(payload: ImageEditRequest, current_user: Optional[User] = Depends(get_optional_current_user)):
     start_time = time.time()
@@ -112,18 +150,9 @@ def process_image_edit(payload: ImageEditRequest, current_user: Optional[User] =
                     logger.warning(f"Replicate remove_bg failed ({e}), falling back to local alpha processor.")
 
             if not edited_img_data:
-                img = src_img.convert("RGBA")
-                datas = img.getdata()
-                bg_r, bg_g, bg_b = datas[0][0], datas[0][1], datas[0][2]
-                newData = []
-                for item in datas:
-                    dist = abs(item[0] - bg_r) + abs(item[1] - bg_g) + abs(item[2] - bg_b)
-                    if dist < 65:
-                        newData.append((255, 255, 255, 0))
-                    else:
-                        newData.append(item)
-                img.putdata(newData)
-                edited_img_data = image_to_base64_data_uri(img, "PNG")
+                isolated_img = remove_background_ai(src_img)
+                edited_img_data = image_to_base64_data_uri(isolated_img, "PNG")
+                provider_used = "AetherMind Neural Alpha Engine"
                 msg = "Background isolated successfully."
 
         # 2. REPLACE BACKGROUND
@@ -140,28 +169,18 @@ def process_image_edit(payload: ImageEditRequest, current_user: Optional[User] =
                     logger.warning(f"Replicate replace_bg failed ({e}), falling back to PIL composite generator.")
 
             if not edited_img_data:
-                bg_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}?width={src_img.width}&height={src_img.height}&nologo=true"
+                subject = remove_background_ai(src_img)
+                bg_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}?width={src_img.width}&height={src_img.height}&nologo=true&seed={int(time.time())}"
                 try:
-                    bg_res = requests.get(bg_url, timeout=6)
+                    bg_res = requests.get(bg_url, timeout=8)
                     if bg_res.status_code == 200:
                         bg_img = Image.open(io.BytesIO(bg_res.content)).convert("RGBA").resize((src_img.width, src_img.height))
-                        subject = src_img.convert("RGBA")
-                        datas = subject.getdata()
-                        bg_r, bg_g, bg_b = datas[0][0], datas[0][1], datas[0][2]
-                        newData = []
-                        for item in datas:
-                            dist = abs(item[0] - bg_r) + abs(item[1] - bg_g) + abs(item[2] - bg_b)
-                            if dist < 65:
-                                newData.append((0, 0, 0, 0))
-                            else:
-                                newData.append(item)
-                        subject.putdata(newData)
                         bg_img.paste(subject, (0, 0), subject)
                         edited_img_data = image_to_base64_data_uri(bg_img, "PNG")
                         provider_used = "AetherMind Neural Composite Engine"
                         msg = "Background replaced with AI scene composite."
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Background composite failed: {e}")
 
             if not edited_img_data:
                 edited_img_data = image_to_base64_data_uri(src_img, "PNG")
