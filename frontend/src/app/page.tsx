@@ -384,12 +384,30 @@ export default function Home() {
     { text: "Analyze data", desc: "Interpret trends and insights", icon: TrendingUp, prompt: "Analyze the key metrics of a tech startup to identify expansion bottlenecks." }
   ];
 
+  const getActiveToken = async (): Promise<string | null> => {
+    let currentToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
+    if (!currentToken) {
+      try {
+        const guestData = await apiService.biometricLogin('fingerprint');
+        currentToken = guestData.access_token;
+        setAuth(guestData.access_token, { email: 'fingerprint_user@samrat.ai', id: guestData.user_id, subscription_status: 'free' });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('aether_token', guestData.access_token);
+        }
+      } catch (err) {
+        console.error('Failed auto guest auth:', err);
+      }
+    }
+    return currentToken;
+  };
+
   const handleStarterPrompt = async (prompt: string) => {
-    if (!token) return;
     if (isStreaming || isLoadingMessages) return;
+    const activeToken = await getActiveToken();
+    if (!activeToken) return;
     setIsStreaming(true);
     try {
-      const newChat = await apiService.createChat(token!, prompt.substring(0, 30), 'general');
+      const newChat = await apiService.createChat(activeToken, prompt.substring(0, 30), 'general');
       setChats([newChat, ...chats]);
       setActiveChatId(newChat.id);
       setMessages([]);
@@ -417,7 +435,7 @@ export default function Home() {
 
       let accumulatedReply = '';
       await apiService.sendMessageStream(
-        token!,
+        activeToken,
         newChat.id,
         prompt,
         modelSettings,
@@ -622,9 +640,11 @@ export default function Home() {
 
       // Process voice message through backend API
       try {
+        const activeToken = await getActiveToken();
+        if (!activeToken) return;
         let currentChatId = activeChatId;
         if (!currentChatId) {
-          const newChat = await apiService.createChat(token!, 'Voice Interaction', 'voice');
+          const newChat = await apiService.createChat(activeToken, 'Voice Interaction', 'voice');
           setChats([newChat, ...chats]);
           setActiveChatId(newChat.id);
           currentChatId = newChat.id;
@@ -643,7 +663,7 @@ export default function Home() {
         // Fetch streaming response to speak out
         let fullReply = '';
         await apiService.sendMessageStream(
-          token!,
+          activeToken,
           currentChatId!,
           text,
           modelSettings,
@@ -669,11 +689,12 @@ export default function Home() {
   });
 
   const selectChat = async (id: string) => {
-    if (!token) return;
+    const activeToken = await getActiveToken();
+    if (!activeToken) return;
     setActiveChatId(id);
     setIsLoadingMessages(true);
     try {
-      const msgs = await apiService.getChatHistory(token!, id);
+      const msgs = await apiService.getChatHistory(activeToken, id);
       setMessages(msgs);
       setActiveScreen('chat');
     } catch (err) {
@@ -697,9 +718,10 @@ export default function Home() {
   }, [activeScreen, isListening, isSpeaking, voiceSettings.continuousMode, startListening]);
 
   const handleCreateChat = async (mode: 'general' | 'voice' = 'general') => {
-    if (!token) return;
+    const activeToken = await getActiveToken();
+    if (!activeToken) return;
     try {
-      const newChat = await apiService.createChat(token!, 'New Conversation', mode);
+      const newChat = await apiService.createChat(activeToken, 'New Conversation', mode);
       setChats([newChat, ...chats]);
       setActiveChatId(newChat.id);
       setMessages([]);
@@ -712,13 +734,16 @@ export default function Home() {
   const handleSendTextMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isStreaming || isLoadingMessages) return;
-    if ((!chatInput.trim() && !chatAttachment) || !token) return;
+    if (!chatInput.trim() && !chatAttachment) return;
+
+    const activeToken = await getActiveToken();
+    if (!activeToken) return;
 
     setIsStreaming(true);
     let currentChatId = activeChatId;
     if (!currentChatId) {
       try {
-        const newChat = await apiService.createChat(token!, chatInput.substring(0, 30), 'general');
+        const newChat = await apiService.createChat(activeToken, chatInput.substring(0, 30), 'general');
         setChats([newChat, ...chats]);
         setActiveChatId(newChat.id);
         currentChatId = newChat.id;
@@ -774,7 +799,7 @@ export default function Home() {
 
     try {
       await apiService.sendMessageStream(
-        token!,
+        activeToken,
         currentChatId!,
         text,
         modelSettings,
