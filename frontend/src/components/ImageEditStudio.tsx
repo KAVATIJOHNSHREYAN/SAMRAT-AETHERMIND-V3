@@ -62,39 +62,128 @@ interface EditHistoryItem {
   timestamp: string;
   prompt?: string;
 }
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem(key);
+      }
+    } catch (e) {
+      console.warn(`[safeStorage] getItem failed for "${key}":`, e);
+    }
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.warn(`[safeStorage] setItem quota warning for "${key}". Cleaning legacy caches...`, e);
+      try {
+        localStorage.removeItem('aether_editor_history');
+        localStorage.removeItem('aether_editor_image');
+        localStorage.removeItem('aether_editor_output');
+        localStorage.setItem(key, value);
+      } catch (evictErr) {
+        console.warn(`[safeStorage] Fallback setItem failed for "${key}":`, evictErr);
+      }
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.warn(`[safeStorage] removeItem failed for "${key}":`, e);
+    }
+  }
+};
+
+// IndexedDB Helper for high-capacity Base64 storage
+const IDB_NAME = 'AetherMindImageDB';
+const IDB_STORE = 'images';
+
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      return reject('IndexedDB unavailable');
+    }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const saveImageToIdb = async (key: string, dataUrl: string | null) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    if (dataUrl) {
+      store.put(dataUrl, key);
+    } else {
+      store.delete(key);
+    }
+  } catch (err) {
+    console.warn(`[IndexedDB] Save failed for ${key}:`, err);
+  }
+};
+
+const loadImageFromIdb = async (key: string): Promise<string | null> => {
+  try {
+    const db = await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (err) {
+    console.warn(`[IndexedDB] Load failed for ${key}:`, err);
+    return null;
+  }
+};
 
 export default function ImageEditStudio({ token }: ImageEditStudioProps) {
   const [studioMode, setStudioMode] = useState<'text2image' | 'editor'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('aether_studio_mode') as any) || 'text2image';
-    }
-    return 'text2image';
+    return (safeStorage.getItem('aether_studio_mode') as any) || 'text2image';
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_studio_mode', studioMode);
-    }
+    safeStorage.setItem('aether_studio_mode', studioMode);
   }, [studioMode]);
 
   // Text-to-Image state
-  const [genPrompt, setGenPrompt] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('aether_gen_prompt') || '' : '');
+  const [genPrompt, setGenPrompt] = useState(() => safeStorage.getItem('aether_gen_prompt') || '');
   const [selectedStyle, setSelectedStyle] = useState('Photorealistic');
   const [aspectRatio, setAspectRatio] = useState<'1024x1024' | '1280x720' | '720x1280'>('1024x1024');
   const [isGenerating, setIsGenerating] = useState(false);
   const [genResult, setGenResult] = useState<ImageResult | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aether_gen_result');
-      return saved ? JSON.parse(saved) : null;
+    const saved = safeStorage.getItem('aether_gen_result');
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
     }
-    return null;
   });
   const [genHistory, setGenHistory] = useState<ImageResult[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aether_gen_history');
-      return saved ? JSON.parse(saved) : [];
+    const saved = safeStorage.getItem('aether_gen_history');
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [];
     }
-    return [];
   });
   const [genError, setGenError] = useState<string | null>(null);
   const [genStatusText, setGenStatusText] = useState<string | null>(null);
@@ -103,88 +192,83 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
   const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_gen_prompt', genPrompt);
-    }
+    safeStorage.setItem('aether_gen_prompt', genPrompt);
   }, [genPrompt]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && genResult) {
-      localStorage.setItem('aether_gen_result', JSON.stringify(genResult));
+    if (genResult) {
+      safeStorage.setItem('aether_gen_result', JSON.stringify(genResult));
     }
   }, [genResult]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_gen_history', JSON.stringify(genHistory.slice(0, 10)));
-    }
+    safeStorage.setItem('aether_gen_history', JSON.stringify(genHistory.slice(0, 10)));
   }, [genHistory]);
 
-  // Editor Tools state with LocalStorage Persistence
+  // Editor Tools state with IndexedDB & safeStorage Persistence
   const [selectedTool, setSelectedTool] = useState<'remove_bg' | 'replace_bg' | 'inpaint' | 'outpaint' | 'upscale' | 'face_enhance'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('aether_edit_selected_tool') as any) || 'remove_bg';
-    }
-    return 'remove_bg';
+    return (safeStorage.getItem('aether_edit_selected_tool') as any) || 'remove_bg';
   });
-  const [image, setImage] = useState<string | null>(() => typeof window !== 'undefined' ? localStorage.getItem('aether_editor_image') : null);
+  const [image, setImage] = useState<string | null>(null);
   const [mask, setMask] = useState<string | null>(null);
-  const [editPrompt, setEditPrompt] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('aether_edit_prompt') || '' : '');
+  const [editPrompt, setEditPrompt] = useState(() => safeStorage.getItem('aether_edit_prompt') || '');
   const [replicateKey, setReplicateKey] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [outputUrl, setOutputUrl] = useState<string | null>(() => typeof window !== 'undefined' ? localStorage.getItem('aether_editor_output') : null);
+  const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [processingTime, setProcessingTime] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aether_editor_proc_time');
-      return saved ? parseFloat(saved) : null;
-    }
-    return null;
+    const saved = safeStorage.getItem('aether_editor_proc_time');
+    return saved ? parseFloat(saved) : null;
   });
-  const [providerUsed, setProviderUsed] = useState<string | null>(() => typeof window !== 'undefined' ? localStorage.getItem('aether_editor_provider') : null);
+  const [providerUsed, setProviderUsed] = useState<string | null>(() => safeStorage.getItem('aether_editor_provider'));
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<boolean>(false);
 
-  // Edit History stack for Undo & Gallery persistence
-  const [editHistory, setEditHistory] = useState<EditHistoryItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aether_editor_history');
-      return saved ? JSON.parse(saved) : [];
+  // Edit History stack for Undo & Gallery persistence (in-memory, no quota crash)
+  const [editHistory, setEditHistory] = useState<EditHistoryItem[]>([]);
+
+  // Load persisted Base64 images from IndexedDB safely on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadImages() {
+      const loadedInput = await loadImageFromIdb('editor_input_image');
+      const loadedOutput = await loadImageFromIdb('editor_output_image');
+
+      if (isMounted) {
+        if (loadedInput) {
+          setImage(loadedInput);
+        } else {
+          const fallbackInput = safeStorage.getItem('aether_editor_image');
+          if (fallbackInput) setImage(fallbackInput);
+        }
+
+        if (loadedOutput) {
+          setOutputUrl(loadedOutput);
+        } else {
+          const fallbackOutput = safeStorage.getItem('aether_editor_output');
+          if (fallbackOutput) setOutputUrl(fallbackOutput);
+        }
+      }
     }
-    return [];
-  });
+    loadImages();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_edit_selected_tool', selectedTool);
-    }
+    safeStorage.setItem('aether_edit_selected_tool', selectedTool);
   }, [selectedTool]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (image) localStorage.setItem('aether_editor_image', image);
-      else localStorage.removeItem('aether_editor_image');
-    }
+    saveImageToIdb('editor_input_image', image);
   }, [image]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (outputUrl) localStorage.setItem('aether_editor_output', outputUrl);
-      else localStorage.removeItem('aether_editor_output');
-    }
+    saveImageToIdb('editor_output_image', outputUrl);
   }, [outputUrl]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_edit_prompt', editPrompt);
-    }
+    safeStorage.setItem('aether_edit_prompt', editPrompt);
   }, [editPrompt]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aether_editor_history', JSON.stringify(editHistory.slice(0, 10)));
-    }
-  }, [editHistory]);
 
   // Inplanting Canvas state
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -214,7 +298,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     const finalPrompt = selectedPreset ? `${promptToUse}, ${selectedPreset.suffix}` : promptToUse;
 
     try {
-      const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
+      const activeToken = token || safeStorage.getItem('aether_token') || safeStorage.getItem('auth_token');
       const BASE_URL = getApiBaseUrl();
       const res = await fetch(`${BASE_URL}/image/generate`, {
         method: 'POST',
@@ -287,6 +371,8 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
         setOutputUrl(null);
         setErrorMessage(null);
         setCompareMode(false);
+        saveImageToIdb('editor_input_image', resultB64);
+        saveImageToIdb('editor_output_image', null);
       };
       reader.readAsDataURL(file);
     }
@@ -304,7 +390,7 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
     const startTime = Date.now();
 
     try {
-      const activeToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('aether_token') || localStorage.getItem('auth_token')) : null);
+      const activeToken = token || safeStorage.getItem('aether_token') || safeStorage.getItem('auth_token');
       const BASE_URL = getApiBaseUrl();
       const res = await fetch(`${BASE_URL}/image-edit/process`, {
         method: 'POST',
@@ -343,11 +429,9 @@ export default function ImageEditStudio({ token }: ImageEditStudioProps) {
       setProviderUsed(provider);
       setStatusMessage('Edit completed successfully!');
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('aether_editor_output', finalOutput);
-        localStorage.setItem('aether_editor_proc_time', elapsed.toString());
-        localStorage.setItem('aether_editor_provider', provider);
-      }
+      saveImageToIdb('editor_output_image', finalOutput);
+      safeStorage.setItem('aether_editor_proc_time', elapsed.toString());
+      safeStorage.setItem('aether_editor_provider', provider);
 
       // Add to session history
       const historyRecord: EditHistoryItem = {
