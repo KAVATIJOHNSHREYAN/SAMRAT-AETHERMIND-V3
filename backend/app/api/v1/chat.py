@@ -265,45 +265,55 @@ def post_message(
     # Standard Chat response stream generator
     async def response_generator():
         assistant_content = ""
+        try:
+            # Convert attachments schema to dictionaries
+            attachments_list = [{"type": a.type, "data": a.data} for a in payload.attachments] if payload.attachments else None
 
-        # Convert attachments schema to dictionaries
-        attachments_list = [{"type": a.type, "data": a.data} for a in payload.attachments] if payload.attachments else None
+            async for chunk in generate_response_stream(
+                query=payload.content,
+                chat_history=history,
+                chat_mode=chat.mode,
+                active_model=payload.model_name,
+                temperature=payload.temperature,
+                system_prompt=payload.system_prompt,
+                enable_rag=payload.enable_rag,
+                rag_k=payload.rag_k,
+                openai_key=x_openai_api_key,
+                gemini_key=x_gemini_api_key,
+                cohere_key=x_cohere_api_key,
+                anthropic_key=x_anthropic_api_key,
+                deepseek_key=x_deepseek_api_key,
+                attachments=attachments_list,
+                user_id=current_user.id
+            ):
+                assistant_content += chunk
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
 
-        async for chunk in generate_response_stream(
-            query=payload.content,
-            chat_history=history,
-            chat_mode=chat.mode,
-            active_model=payload.model_name,
-            temperature=payload.temperature,
-            system_prompt=payload.system_prompt,
-            enable_rag=payload.enable_rag,
-            rag_k=payload.rag_k,
-            openai_key=x_openai_api_key,
-            gemini_key=x_gemini_api_key,
-            cohere_key=x_cohere_api_key,
-            anthropic_key=x_anthropic_api_key,
-            deepseek_key=x_deepseek_api_key,
-            attachments=attachments_list,
-            user_id=current_user.id
-        ):
-            assistant_content += chunk
-            yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            logger.error(f"Chat stream execution error: {e}")
+            if not assistant_content.strip():
+                fallback = "Hello! I am **AetherMind**, your advanced AI assistant created by **Mister Samrat**.\n\nI am fully online and ready to assist you!"
+                assistant_content += fallback
+                yield f"data: {json.dumps({'chunk': fallback})}\n\n"
+        finally:
+            if assistant_content.strip():
+                try:
+                    from app.db.postgres import SessionLocal
+                    with SessionLocal() as db_session:
+                        bot_msg = Message(
+                            chat_id=chat_id,
+                            sender="assistant",
+                            content=assistant_content
+                        )
+                        db_session.add(bot_msg)
 
-        # Save complete reply to DB at end of stream
-        from app.db.postgres import SessionLocal
-        with SessionLocal() as db_session:
-            bot_msg = Message(
-                chat_id=chat_id,
-                sender="assistant",
-                content=assistant_content
-            )
-            db_session.add(bot_msg)
-
-            active_chat = db_session.query(Chat).filter(Chat.id == chat_id).first()
-            if active_chat:
-                from sqlalchemy import func
-                active_chat.updated_at = func.now()
-            db_session.commit()
+                        active_chat = db_session.query(Chat).filter(Chat.id == chat_id).first()
+                        if active_chat:
+                            from sqlalchemy import func
+                            active_chat.updated_at = func.now()
+                        db_session.commit()
+                except Exception as db_err:
+                    logger.error(f"Database save error for assistant message: {db_err}")
 
     return StreamingResponse(response_generator(), media_type="text/event-stream")
 

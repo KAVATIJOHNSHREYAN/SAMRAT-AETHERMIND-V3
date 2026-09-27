@@ -244,88 +244,103 @@ export const apiService = {
     onDone?: () => void
   ) {
     const headers: Record<string, string> = getHeaders(token);
-    if (settings.geminiApiKey) {
-      headers['X-Gemini-API-Key'] = settings.geminiApiKey;
-    }
-    if (settings.openaiApiKey) {
-      headers['X-OpenAI-API-Key'] = settings.openaiApiKey;
-    }
-    if (settings.replicateApiKey) {
-      headers['X-Replicate-API-Key'] = settings.replicateApiKey;
-    }
-    if (settings.cohereApiKey) {
-      headers['X-Cohere-API-Key'] = settings.cohereApiKey;
-    }
-    if (settings.anthropicApiKey) {
-      headers['X-Anthropic-API-Key'] = settings.anthropicApiKey;
-    }
-    if (settings.deepseekApiKey) {
-      headers['X-DeepSeek-API-Key'] = settings.deepseekApiKey;
-    }
+    if (settings.geminiApiKey) headers['X-Gemini-API-Key'] = settings.geminiApiKey;
+    if (settings.openaiApiKey) headers['X-OpenAI-API-Key'] = settings.openaiApiKey;
+    if (settings.replicateApiKey) headers['X-Replicate-API-Key'] = settings.replicateApiKey;
+    if (settings.cohereApiKey) headers['X-Cohere-API-Key'] = settings.cohereApiKey;
+    if (settings.anthropicApiKey) headers['X-Anthropic-API-Key'] = settings.anthropicApiKey;
+    if (settings.deepseekApiKey) headers['X-DeepSeek-API-Key'] = settings.deepseekApiKey;
 
-    const res = await fetch(`${BASE_URL}/chat/${chatId}/message`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        content,
-        model_name: settings.modelName,
-        temperature: settings.temperature,
-        system_prompt: settings.systemPrompt,
-        enable_rag: settings.enableRag,
-        rag_k: settings.ragK,
-        gemini_key: settings.geminiApiKey,
-        openai_key: settings.openaiApiKey,
-        attachments: attachments || null
-      })
-    });
-
-    if (!res.ok) {
-      throw new Error('Streaming connection failed');
-    }
-
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error('No readable body stream found');
-
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 30000); // 30 second strict timeout guard
 
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const res = await fetch(`${BASE_URL}/chat/${chatId}/message`, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          content,
+          model_name: settings.modelName,
+          temperature: settings.temperature,
+          system_prompt: settings.systemPrompt,
+          enable_rag: settings.enableRag,
+          rag_k: settings.ragK,
+          gemini_key: settings.geminiApiKey,
+          openai_key: settings.openaiApiKey,
+          attachments: attachments || null
+        })
+      });
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
+      if (!res.ok) {
+        let errDetail = `HTTP ${res.status}: Request failed.`;
+        try {
+          const errJson = await res.json();
+          errDetail = errJson.detail || errJson.message || errDetail;
+        } catch {
+          if (res.status === 401) errDetail = "Authentication failed (401). Please check your credentials.";
+          else if (res.status === 429) errDetail = "Rate limit exceeded (429). Please wait a moment.";
+          else if (res.status === 500) errDetail = "Internal Server Error (500). Please try again.";
+        }
+        onChunk(`⚠️ ${errDetail}`);
+        return;
+      }
 
-        // Save the last partial line back to buffer
-        buffer = lines.pop() || '';
+      const reader = res.body?.getReader();
+      if (!reader) {
+        onChunk("⚠️ Unable to establish body stream reader.");
+        return;
+      }
 
-        for (const line of lines) {
-          const cleanLine = line.trim();
-          if (cleanLine.startsWith('data:') || cleanLine.startsWith('data: ')) {
-            const rawPayload = cleanLine.replace(/^data:\s*/, '');
-            if (!rawPayload || rawPayload === '[DONE]') continue;
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
-            let chunkText = '';
-            try {
-              const dataObj = JSON.parse(rawPayload);
-              if (typeof dataObj === 'string') {
-                chunkText = dataObj;
-              } else if (dataObj && typeof dataObj === 'object') {
-                chunkText = dataObj.chunk || dataObj.content || dataObj.text || dataObj.delta || '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (cleanLine.startsWith('data:') || cleanLine.startsWith('data: ')) {
+              const rawPayload = cleanLine.replace(/^data:\s*/, '');
+              if (!rawPayload || rawPayload === '[DONE]') continue;
+
+              let chunkText = '';
+              try {
+                const dataObj = JSON.parse(rawPayload);
+                if (typeof dataObj === 'string') {
+                  chunkText = dataObj;
+                } else if (dataObj && typeof dataObj === 'object') {
+                  chunkText = dataObj.chunk || dataObj.content || dataObj.text || dataObj.delta || dataObj.detail || '';
+                }
+              } catch {
+                chunkText = rawPayload;
               }
-            } catch {
-              chunkText = rawPayload;
-            }
 
-            if (chunkText) {
-              onChunk(chunkText);
+              if (chunkText) {
+                onChunk(chunkText);
+              }
             }
           }
         }
+      } finally {
+        reader.releaseLock();
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        onChunk("⏱️ Request timed out after 30 seconds. Please try again.");
+      } else {
+        onChunk(`⚠️ Connection Error: ${err.message || 'Network communication failure.'}`);
       }
     } finally {
-      reader.releaseLock();
+      clearTimeout(timeoutId);
       onDone?.();
     }
   },
