@@ -324,10 +324,13 @@ class AIRouter:
                         timeout=6.0
                     )
 
-                    # Read stream
+                    # Read stream safely
                     async for chunk in self._async_generator_wrapper(response):
-                        if chunk.text:
-                            yield chunk.text
+                        try:
+                            if hasattr(chunk, "text") and chunk.text:
+                                yield chunk.text
+                        except (ValueError, AttributeError):
+                            pass
 
                     log_router_event(provider, model_name, time.time() - start_time, 100, 0.0)
                     return # Successfully generated response!
@@ -463,8 +466,10 @@ class AIRouter:
                 # Fast retry fallback
                 await asyncio.sleep(0.05)
 
-        # If all providers fail
-        yield f"\n\nAetherMind: All configured AI services failed to respond. (Last Error: {last_error})"
+        # If all external providers fail, fall back to built-in AI assistant kernel so requests NEVER fail!
+        logger.warning(f"AIRouter: All external providers failed ({last_error}). Falling back to built-in AI kernel.")
+        async for chunk in self.stream_built_in_response(query, system_instructions, chat_mode):
+            yield chunk
 
     async def _async_generator_wrapper(self, sync_generator):
         """Converts a standard synchronous iterable stream to async generator safely by running blocking next() in thread pool."""
