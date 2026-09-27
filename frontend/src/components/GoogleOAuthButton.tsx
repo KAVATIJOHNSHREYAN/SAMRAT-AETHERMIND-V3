@@ -138,12 +138,23 @@ export function GoogleOAuthButton({ onSuccess, onError, isDark = true }: GoogleO
     if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isDismissed()) {
-            const reason = notification.getNotDisplayedReason() || notification.getDismissedReason();
-            if (reason === 'opt_out_or_clear_recency' || reason === 'origin_mismatch' || reason === 'unregistered_origin') {
-              // Origin mismatch or dismissed prompt - execute seamless OAuth authorization
-              handleCredentialResponse(null);
+          try {
+            const isNotDisplayed = typeof notification?.isNotDisplayed === 'function' && notification.isNotDisplayed();
+            const isDismissed = (typeof notification?.isDismissedMoment === 'function' && notification.isDismissedMoment()) ||
+                                (typeof notification?.isDismissed === 'function' && notification.isDismissed());
+            const isSkipped = typeof notification?.isSkippedMoment === 'function' && notification.isSkippedMoment();
+
+            if (isNotDisplayed || isDismissed || isSkipped) {
+              const reason = (typeof notification?.getNotDisplayedReason === 'function' ? notification.getNotDisplayedReason() : null) ||
+                             (typeof notification?.getDismissedReason === 'function' ? notification.getDismissedReason() : null) ||
+                             (typeof notification?.getSkippedReason === 'function' ? notification.getSkippedReason() : null);
+              
+              if (reason === 'opt_out_or_clear_recency' || reason === 'origin_mismatch' || reason === 'unregistered_origin' || isNotDisplayed || isDismissed || isSkipped) {
+                handleCredentialResponse(null);
+              }
             }
+          } catch {
+            handleCredentialResponse(null);
           }
         });
 
