@@ -265,6 +265,8 @@ def post_message(
     # Standard Chat response stream generator
     async def response_generator():
         assistant_content = ""
+        # Flush initial SSE chunk immediately so connection is established with zero delay
+        yield f"data: {json.dumps({'chunk': ''})}\n\n"
         try:
             # Convert attachments schema to dictionaries
             attachments_list = [{"type": a.type, "data": a.data} for a in payload.attachments] if payload.attachments else None

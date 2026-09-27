@@ -83,12 +83,12 @@ async def generate_response_stream(
     # RAG Search (Only perform vector search if query requires deep context)
     if enable_rag and chat_mode in ["general", "voice"] and len(query.strip()) > 15:
         api_key = gemini_key or openai_key
-        docs = similarity_search(query, k=rag_k, api_key=api_key)
-
-        if docs:
-            context_str = "\n".join(
-                [f"- {doc.page_content}" for doc in docs]
-            )
+        try:
+            docs = await asyncio.to_thread(similarity_search, query, k=rag_k, api_key=api_key)
+            if docs:
+                context_str = "\n".join([f"- {doc.page_content}" for doc in docs])
+        except Exception as e:
+            print(f"RAG search error: {e}")
 
     # System Instructions
     system_instructions = (
