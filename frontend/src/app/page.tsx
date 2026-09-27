@@ -17,6 +17,7 @@ import { AIProviderSettings } from '@/components/AIProviderSettings';
 import { DevicePreviewMenu, DeviceSimulatorWrapper, DEVICE_PRESETS, DevicePreset } from '@/components/DevicePreviewSimulator';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
+import { DeveloperDebugPanel } from '@/components/DeveloperDebugPanel';
 import { useAuth } from '@/context/AuthContext';
 import { BRANDING_CONFIG } from '@/config/branding';
 import {
@@ -2719,6 +2720,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      <DeveloperDebugPanel />
     </DeviceSimulatorWrapper>
   );
 }
