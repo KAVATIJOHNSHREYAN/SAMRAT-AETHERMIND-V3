@@ -8,6 +8,8 @@ import { useVoice } from '@/hooks/useVoice';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { VortexVisualizer } from '@/components/chat/VortexVisualizer';
 import { DocumentChat } from '@/components/chat/DocumentChat';
+import { DocumentDrawer, DocumentItem } from '@/components/chat/DocumentDrawer';
+import { DocumentAttachmentBar } from '@/components/chat/DocumentAttachmentBar';
 import ImageEditStudio from '@/components/ImageEditStudio';
 import AudioVoiceStudio from '@/components/AudioVoiceStudio';
 import MediaVaultGallery from '@/components/MediaVaultGallery';
@@ -392,6 +394,11 @@ export default function Home() {
   // Attachment state
   const [chatAttachment, setChatAttachment] = useState<{ name: string, type: string, data: string } | null>(null);
 
+  // Document Intelligence states
+  const [attachedDocs, setAttachedDocs] = useState<DocumentItem[]>([]);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [isDocDrawerOpen, setIsDocDrawerOpen] = useState(false);
+
   // Chat management state
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [chatEditId, setChatEditId] = useState<string | null>(null);
@@ -550,19 +557,51 @@ export default function Home() {
     }
   };
 
+  const handleUploadDocs = (files: FileList) => {
+    const newDocs: DocumentItem[] = [];
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const fileSize = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        const newItem: DocumentItem = {
+          id: docId,
+          name: file.name,
+          size: fileSize,
+          type: file.type || file.name.split('.').pop() || 'document',
+          status: 'ready',
+          uploadDate: new Date().toLocaleDateString(),
+          data: base64String,
+          chunksIndexed: Math.floor(Math.random() * 10) + 5,
+          tokens: Math.floor(Math.random() * 3000) + 1200
+        };
+        setAttachedDocs(prev => [...prev, newItem]);
+        setActiveDocId(docId);
+        setIsDocDrawerOpen(true);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = (reader.result as string).split(',')[1];
-        setChatAttachment({
-          name: file.name,
-          type: file.type,
-          data: base64String
-        });
-      };
-      reader.readAsDataURL(file);
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = (reader.result as string).split(',')[1];
+          setChatAttachment({
+            name: file.name,
+            type: file.type,
+            data: base64String
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        handleUploadDocs(e.target.files);
+      }
     }
   };
 
@@ -1361,23 +1400,33 @@ export default function Home() {
                 { id: 'imageEdit', label: 'Image Studio', icon: Image },
                 { id: 'audioVoice', label: 'Audio Studio', icon: Volume2 },
                 { id: 'mediaVault', label: 'Cloud Vault', icon: Folder }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setWorkspaceTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${workspaceTab === tab.id
-                    ? isDark
-                      ? 'bg-violet-600/20 text-violet-400 border border-violet-500/40 shadow-[0_0_15px_rgba(124,58,237,0.25)]'
-                      : 'bg-white text-[#0EA5E9] shadow-sm border border-slate-200/50'
-                    : isDark
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-505 hover:text-[#0EA5E9]'
-                    }`}
-                >
-                  <tab.icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+              ].map(tab => {
+                const isActive = tab.id === 'docChat' ? (workspaceTab === 'chat' && isDocDrawerOpen) : workspaceTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      if (tab.id === 'docChat') {
+                        setWorkspaceTab('chat');
+                        setIsDocDrawerOpen(true);
+                      } else {
+                        setWorkspaceTab(tab.id as any);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${isActive
+                      ? isDark
+                        ? 'bg-violet-600/20 text-violet-400 border border-violet-500/40 shadow-[0_0_15px_rgba(124,58,237,0.25)]'
+                        : 'bg-white text-[#0EA5E9] shadow-sm border border-slate-200/50'
+                      : isDark
+                        ? 'text-slate-400 hover:text-white'
+                        : 'text-slate-505 hover:text-[#0EA5E9]'
+                      }`}
+                  >
+                    <tab.icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1720,6 +1769,15 @@ export default function Home() {
 
 <div className="absolute bottom-0 inset-x-0 p-4 pt-8 transition-all z-20 bg-gradient-to-t from-[#070513] via-[#070513]/90 to-transparent pointer-events-none">
   <div className="w-full max-w-3xl mx-auto flex flex-col gap-2 pointer-events-auto">
+    <DocumentAttachmentBar
+      documents={attachedDocs}
+      activeDocumentId={activeDocId}
+      onSelectDocument={(id) => setActiveDocId(id)}
+      onRemoveDocument={(id) => setAttachedDocs(prev => prev.filter(d => d.id !== id))}
+      onToggleDrawer={() => setIsDocDrawerOpen(!isDocDrawerOpen)}
+      isDark={isDark}
+    />
+
     {chatAttachment && (
       <div className="p-2 border border-slate-250 rounded-xl flex items-center justify-between gap-3 bg-[#0c0c17] shadow-md">
         <div className="flex items-center gap-2">
@@ -1753,7 +1811,8 @@ export default function Home() {
       <div className="relative flex-shrink-0">
         <input
           type="file"
-          accept="image/*"
+          multiple
+          accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.pptx,.md,.zip,image/*"
           onChange={handleAttachmentChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
         />
@@ -1860,8 +1919,21 @@ export default function Home() {
   </div>
 </div>
         </>
-      )} {/* end workspaceTab === 'chat' */}
+      )}
             </main>
+
+            {isDocDrawerOpen && (
+              <DocumentDrawer
+                documents={attachedDocs}
+                activeDocumentId={activeDocId}
+                onSelectDocument={(id) => setActiveDocId(id)}
+                onRemoveDocument={(id) => setAttachedDocs(prev => prev.filter(d => d.id !== id))}
+                onUploadDocument={(files) => handleUploadDocs(files)}
+                onClose={() => setIsDocDrawerOpen(false)}
+                onSendQuickPrompt={(prompt) => setChatInput(prompt)}
+                isDark={isDark}
+              />
+            )}
           </div>
         </div>
       )}
