@@ -302,17 +302,24 @@ export const apiService = {
 
         for (const line of lines) {
           const cleanLine = line.trim();
-          if (cleanLine.startsWith('data: ')) {
+          if (cleanLine.startsWith('data:') || cleanLine.startsWith('data: ')) {
+            const rawPayload = cleanLine.replace(/^data:\s*/, '');
+            if (!rawPayload || rawPayload === '[DONE]') continue;
+
+            let chunkText = '';
             try {
-              console.log('RAW SSE DATA:', cleanLine.substring(6));
-              const dataObj = JSON.parse(cleanLine.substring(6));
-              if (dataObj && dataObj.chunk) {
-                console.log('EXTRACTED CHUNK:', dataObj.chunk);
-                onChunk(dataObj.chunk);
+              const dataObj = JSON.parse(rawPayload);
+              if (typeof dataObj === 'string') {
+                chunkText = dataObj;
+              } else if (dataObj && typeof dataObj === 'object') {
+                chunkText = dataObj.chunk || dataObj.content || dataObj.text || dataObj.delta || '';
               }
-            } catch (err) {
-              console.error('SSE PARSE ERROR:', err);
-              // Ignore partial parsing errors
+            } catch {
+              chunkText = rawPayload;
+            }
+
+            if (chunkText) {
+              onChunk(chunkText);
             }
           }
         }

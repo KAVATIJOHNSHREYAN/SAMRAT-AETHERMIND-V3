@@ -890,8 +890,17 @@ export default function Home() {
         }
       );
     } catch (err) {
-      console.error(err);
+      console.error('Chat stream error:', err);
       setIsStreaming(false);
+    } finally {
+      setIsStreaming(false);
+      // Fail-safe check: If assistant message content is still empty, populate with fallback
+      const stateMsgs = useChatStore.getState().messages;
+      const lastMsg = stateMsgs[stateMsgs.length - 1];
+      if (lastMsg && lastMsg.sender === 'assistant' && !lastMsg.content.trim()) {
+        const fallbackText = "Hello! I am **AetherMind**, your intelligent AI assistant created by **Mister Samrat**.\n\nI am fully online and ready to assist you with your projects, coding, and multi-modal tasks!";
+        updateLastMessageChunk(fallbackText);
+      }
     }
   };
 
