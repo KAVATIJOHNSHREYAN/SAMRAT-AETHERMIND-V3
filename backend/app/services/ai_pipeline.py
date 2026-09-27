@@ -108,21 +108,8 @@ async def generate_response_stream(
         elif chat_mode == "voice":
             system_instructions += " Keep responses short and conversational."
 
-    # Instant High-Speed Keyword Matching for simple greetings
-    import re
-    query_clean = query.lower().strip()
-    words_in_query = set(re.findall(r'\b\w+\b', query_clean))
-
-    greeting_words = {"hi", "hello", "hey", "hola", "greetings", "good morning", "good evening"}
-    if query_clean in greeting_words or (len(words_in_query) == 1 and bool(words_in_query.intersection(greeting_words))):
-        greeting_text = (
-            "Hello! I am **AetherMind**, your advanced AI assistant created by **Mister Samrat**.\n\n"
-            "I am fully online and ready to assist you with your projects, coding, document intelligence, and multi-modal tasks!"
-        )
-        for word in greeting_text.split(" "):
-            yield word + " "
-            await asyncio.sleep(0.01)
-        return
+    if context_str:
+        system_instructions += f"\n\nRetrieved Knowledge Context:\n{context_str}"
 
     # Redirection to the Multi-Provider Orchestration System (AI Router)
     from app.services.ai_router import ai_router

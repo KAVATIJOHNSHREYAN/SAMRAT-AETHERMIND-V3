@@ -292,7 +292,7 @@ def post_message(
         except Exception as e:
             logger.error(f"Chat stream execution error: {e}")
             if not assistant_content.strip():
-                fallback = "Hello! I am **AetherMind**, your advanced AI assistant created by **Mister Samrat**.\n\nI am fully online and ready to assist you!"
+                fallback = f"⚠️ **Stream Error**: Unable to complete AI request ({str(e)}). Please verify provider settings and network connection."
                 assistant_content += fallback
                 yield f"data: {json.dumps({'chunk': fallback})}\n\n"
         finally:
